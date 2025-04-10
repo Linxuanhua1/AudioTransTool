@@ -12,3 +12,4 @@
 .venv
 .stversions
 test
+ffprobe.exe
