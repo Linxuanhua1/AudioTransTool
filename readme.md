@@ -5,7 +5,7 @@ AudioTranscTool诞生的原因十分简单，因为ffmpeg对于音频的32bit音
 ## 特点：
 
 1. 支持apev2 (ape, tak)、id3v2.3&4 (wav, tta)、mp4 (m4a)的元数据映射到vorbis comment (flac)。
-2. 支持32bit int wav和32bit in m4a转换到flac。（32bit float wav会被跳过）
+2. 支持32bit int wav和32bit in m4a转换到flac。（32bit float wav会被跳过，因为flac不支持）
 3. 支持自动分轨（基于文件名检测，当cue的名字和音频的名字相同时就会分割，仅支持flac分割，脚本里会先把所有支持的无损格式音频转换成flac）
 4. 未来支持使用Asin、Barcode、Catalognumber和ascoutid+专辑名在musicbrainz搜索对应元数据
 5. 未来还会更新别的功能，看我有没有空
