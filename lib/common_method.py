@@ -25,3 +25,22 @@ def get_file_name_and_root(file_path):
     root, file = os.path.split(file_path)
     name, _ = os.path.splitext(file)
     return root, name
+
+
+def check_multi_result(result):
+    if result['release-count'] > 1:
+        for release in result['release-list']:
+            if release['medium-list'][0]['format'] == "CD":
+                return release['id']
+    elif result['release-count'] == 1:
+        return result['release-list'][0]['id']
+    else:
+        return None
+
+def handle_repeat_file_name(root, filename, ext, suffix=1):
+    file_path = os.path.join(root, f'{filename}.{ext}')
+    if os.path.exists(file_path):
+        file_path = os.path.join(root, f'{filename}({suffix}).{ext}')
+        if os.path.exists(file_path):
+            file_path =  handle_repeat_file_name(root, filename, suffix+1)
+    return file_path

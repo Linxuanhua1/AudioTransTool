@@ -20,8 +20,8 @@ mac和linux，部分codec没有发在unix平台下运行的可执行文件，还
 
 ```
 activate_cue_splitting = true   # 是否开启分轨功能，默认为true
-is_delete_single_track = false  # 分轨时是否删除原来的整轨和cue，默认为false
-is_delete_origin_audio = false  # 是否删除转码前的音频，默认为false
+is_delete_single_track = true  # 分轨时是否删除原来的整轨和cue，默认为true
+is_delete_origin_audio = true  # 是否删除转码前的音频，默认为true
 ```
 
 ### 使用教程：
