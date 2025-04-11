@@ -282,6 +282,14 @@ class MetaHandler:
                     target_audio[vorbis_field] = tag
         target_audio.save()
 
+    @staticmethod
+    def get_catno_from_folder_name(folder_name, reg_exp):
+        results = re.match(reg_exp, folder_name)
+        if results:
+            catno = results.group(1)
+            return catno
+        else:
+            return None
 
 class Splitter:
     @staticmethod
