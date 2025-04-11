@@ -29,7 +29,7 @@ class AudioHandler:
     @staticmethod
     def convert_wav_to_flac(file_path, root, name):  # 缓存文件转换为flac
         try:
-            cmd = ['flac.exe', file_path, '--best', '--threads=16', '-o', f'{os.path.join(root, name)}.flac']
+            cmd = ['flac', file_path, '--best', '--threads=16', '-o', f'{os.path.join(root, name)}.flac']
             subprocess.run(cmd, capture_output=True, text=True, check=True)
         except subprocess.CalledProcessError as e:
             logger.error(e.stdout)
@@ -52,7 +52,7 @@ class AudioHandler:
     @staticmethod
     def is_audio_allowed_to_convert(file_path):
         try:
-            cmd = ['ffprobe.exe', '-v', 'quiet', '-print_format', 'json', '-show_entries', 'stream=sample_fmt,codec_name', file_path]
+            cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_entries', 'stream=sample_fmt,codec_name', file_path]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         except subprocess.CalledProcessError as e:
             print(e.stderr)
@@ -85,7 +85,7 @@ class AudioHandler:
     def m4a2flac(file_path, is_delete_origin_audio):
         logger.info(f'正在将{file_path}暂时转换为wav，为后续处理')
         root, name = get_file_name_and_root(file_path)
-        cmd = ['refalac64.exe', '-D', file_path, '-o', f'{os.path.join(root, name)}.wav']
+        cmd = ['refalac', '-D', file_path, '-o', f'{os.path.join(root, name)}.wav']
         AudioHandler.common_cmd2flac(cmd, file_path, root, name)
         MetaHandler.mp4_to_vorbis(file_path, root, name)
         logger.info(f'成功将{file_path}的元数据转移到{os.path.join(root, name)}.flac')
@@ -97,7 +97,7 @@ class AudioHandler:
     def ape2flac(file_path, is_delete_origin_audio):
         logger.info(f'正在将{file_path}暂时转换为wav，为后续处理')
         root, name = get_file_name_and_root(file_path)
-        cmd = ['mac.exe', file_path, f'{os.path.join(root, name)}.wav', '-d', '-threads=16']
+        cmd = ['mac', file_path, f'{os.path.join(root, name)}.wav', '-d', '-threads=16']
         AudioHandler.common_cmd2flac(cmd, file_path, root, name)
         MetaHandler.apev2_to_vorbis(file_path, root, name)
         logger.info(f'成功将{file_path}的元数据转移到{os.path.join(root, name)}.flac')
@@ -109,7 +109,7 @@ class AudioHandler:
     def tak2flac(file_path, is_delete_origin_audio):
         logger.info(f'正在将{file_path}暂时转换为wav，为后续处理')
         root, name = get_file_name_and_root(file_path)
-        cmd = ['Takc.exe', '-d', file_path, f'{os.path.join(root, name)}.wav']
+        cmd = ['Takc', '-d', file_path, f'{os.path.join(root, name)}.wav']
         AudioHandler.common_cmd2flac(cmd, file_path, root, name)
         MetaHandler.apev2_to_vorbis(file_path, root, name)
         logger.info(f'成功将{file_path}的元数据转移到{os.path.join(root, name)}.flac')
@@ -121,7 +121,7 @@ class AudioHandler:
     def tta2flac(file_path, is_delete_origin_audio):
         logger.info(f'正在将{file_path}暂时转换为wav，为后续处理')
         root, name = get_file_name_and_root(file_path)
-        cmd = ['ttaenc.exe', '-d', file_path, f'{os.path.join(root, name)}.wav']
+        cmd = ['ttaenc', '-d', file_path, f'{os.path.join(root, name)}.wav']
         AudioHandler.common_cmd2flac(cmd, file_path, root, name)
         MetaHandler.id3_tag_to_vorbis(file_path, root, name)
         logger.info(f'成功将{file_path}的元数据转移到{os.path.join(root, name)}.flac')
