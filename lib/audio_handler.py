@@ -372,7 +372,7 @@ class CueParser:
 
     @staticmethod
     def paser_cue_data(file_path):
-        with open(file_path) as f:
+        with open(file_path, encoding='utf-8') as f:
             lines = [CueParser.strQ2B(line.strip()) for line in f.readlines()]
 
         album_info_flag = True
