@@ -17,7 +17,11 @@ AudioTranscTool诞生的原因十分简单，因为ffmpeg对于音频的32bit音
 
 在config.toml里可以选择开启哪些功能
 
-现在就只有一个cue分割，true未开启，flase为关闭
+```
+activate_cue_splitting = true   # 是否开启分轨功能，默认为true
+is_delete_single_track = false  # 分轨时是否删除原来的整轨和cue，默认为false
+is_delete_origin_audio = false  # 是否删除转码前的音频，默认为false
+```
 
 ### 使用教程：
 
