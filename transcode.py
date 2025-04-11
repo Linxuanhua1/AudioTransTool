@@ -27,10 +27,13 @@ for root, dirs, files in os.walk(folder_path):
             if aud_hdl.is_audio_allowed_to_convert(audio_file_path):
                 logger.info(f'即将处理音频{audio_file_path}')
                 handler(audio_file_path, config['is_delete_origin_audio'])  # 调用处理函数
+logger.info('转码结束')
 
 if config['activate_cue_splitting']:
+    logger.info('开始分轨')
     for root, dirs, files in os.walk(folder_path):
         for file in files:
             if file.endswith('.flac'):
                 file_path = os.path.join(root, file)
                 Splitter.split_flac_with_cue(file_path, config['is_delete_single_track'])
+    logger.info('分轨结束')

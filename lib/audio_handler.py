@@ -13,7 +13,7 @@ os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.getcwd() + '/encoders/
 
 ALLOWED_SAMPLE_FMT = ['s32', 's32p', 's16', 's16p']
 
-EXCLUDED_DIRS = ['bk', 'booklet', 'scan', 'scans', 'artwork', 'artworks']
+EXCLUDED_DIRS = ['bk', 'booklet', 'scan', 'scans', 'artwork', 'artworks', 'jacket']
 
 class AudioHandler:
     @staticmethod
@@ -28,8 +28,9 @@ class AudioHandler:
 
     @staticmethod
     def convert_wav_to_flac(file_path, root, name):  # 缓存文件转换为flac
+        target_file_path = handle_repeat_file_name(root, name, 'flac')
         try:
-            cmd = ['flac', file_path, '--best', '--threads=16', '-o', f'{os.path.join(root, name)}.flac']
+            cmd = ['flac', file_path, '--best', '--threads=16', '-o', target_file_path]
             subprocess.run(cmd, capture_output=True, text=True, check=True)
         except subprocess.CalledProcessError as e:
             logger.error(e.stdout)
@@ -37,9 +38,9 @@ class AudioHandler:
 
     @staticmethod
     def tmp_file_save_to_wav(root, track, channels, bits_per_sample, sample_rate, raw):
-        filename = f"{track['TRACKNUMBER']} - {track['TITLE']}.wav"
+        filename = f"{track['TRACKNUMBER']} - {track['TITLE']}"
         filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
-        file_path = os.path.join(root, filename)
+        file_path = handle_repeat_file_name(root, filename, 'wav')
         logger.debug(f'将分轨文件暂存到{file_path}')
         with wave.open(file_path, 'wb') as wf:
             wf.setnchannels(channels)  # 设置为立体声（两个通道）
@@ -141,6 +142,13 @@ HANDLERS = {
 
 class MetaHandler:
     @staticmethod
+    def get_catno_from_file(folder_path):
+            for file in os.listdir(folder_path):
+                if file.endswith(('.log', '.txt')):
+                    _, name = get_file_name_and_root(os.path.join(folder_path, file))
+                    return name
+
+    @staticmethod
     def id3_pic_to_vorbis(tag, target_audio) -> None:
         pic = Picture()
         pic.data = tag.data
@@ -183,7 +191,7 @@ class MetaHandler:
         try:
             version = source_audio.tags.version[1]
         except AttributeError:
-            print(f'{file_path}没有元数据，无需传递')
+            logger.info(f'{file_path}没有元数据，无需传递')
             return
         for field, tag in source_audio.tags.items():
             vorbis_field = MetaHandler.id3_mapping_to_vorbis(field, version)
@@ -217,16 +225,17 @@ class MetaHandler:
     def apev2_to_vorbis(file_path, root, name) -> None:
         source_audio = mutagen.File(file_path)
         target_audio = mutagen.File(f'{os.path.join(root, name)}.flac')
-        for field, tag in source_audio.tags.items():
-            if field.startswith('Cover Art'):
-                MetaHandler.apev2_pic_to_vorbis(tag, field, target_audio)
-                continue
-            elif field in APEV2_TO_VORBIS:
-                vorbis_field = APEV2_TO_VORBIS[field]
-            else:
-                vorbis_field = field
-            target_audio[vorbis_field] = [i.decode() for i in tag.value.encode().split(b'\0')]
-        target_audio.save()
+        if source_audio.tags:
+            for field, tag in source_audio.tags.items():
+                if field.startswith('Cover Art'):
+                    MetaHandler.apev2_pic_to_vorbis(tag, field, target_audio)
+                    continue
+                elif field in APEV2_TO_VORBIS:
+                    vorbis_field = APEV2_TO_VORBIS[field]
+                else:
+                    vorbis_field = field
+                target_audio[vorbis_field] = [i.decode() for i in tag.value.encode().split(b'\0')]
+            target_audio.save()
 
     @staticmethod
     def mp4_mapping_to_vorbis(field) -> str or list[str, str]:
@@ -260,27 +269,27 @@ class MetaHandler:
     def mp4_to_vorbis(file_path, root, name):
         source_audio = mutagen.File(file_path)
         target_audio = mutagen.File(f'{os.path.join(root, name)}.flac')
+        if source_audio.tags:
+            for field, tag in source_audio.tags.items():
+                vorbis_field = MetaHandler.mp4_mapping_to_vorbis(field)
 
-        for field, tag in source_audio.tags.items():
-            vorbis_field = MetaHandler.mp4_mapping_to_vorbis(field)
-
-            if isinstance(vorbis_field, list):
-                for field, metadata in zip(vorbis_field, tag[0]):
-                    target_audio[field] = str(metadata)
-            elif vorbis_field == 'xid':
-                for t in tag:
-                    t = t.split(":")
-                    target_audio["CONTENTPROVIDER"] = t[0]
-                    target_audio[t[1]] = t[2]
-            elif vorbis_field == '©too':
-                continue
-            else:
-                if vorbis_field == 'covr':
-                    MetaHandler.mp4_pic_to_vorbis(tag, target_audio)
+                if isinstance(vorbis_field, list):
+                    for field, metadata in zip(vorbis_field, tag[0]):
+                        target_audio[field] = str(metadata)
+                elif vorbis_field == 'xid':
+                    for t in tag:
+                        t = t.split(":")
+                        target_audio["CONTENTPROVIDER"] = t[0]
+                        target_audio[t[1]] = t[2]
+                elif vorbis_field == '©too':
+                    continue
                 else:
-                    tag = [str(i.decode()) if isinstance(i, bytes) else str(i) for i in tag]
-                    target_audio[vorbis_field] = tag
-        target_audio.save()
+                    if vorbis_field == 'covr':
+                        MetaHandler.mp4_pic_to_vorbis(tag, target_audio)
+                    else:
+                        tag = [str(i.decode()) if isinstance(i, bytes) else str(i) for i in tag]
+                        target_audio[vorbis_field] = tag
+            target_audio.save()
 
     @staticmethod
     def get_catno_from_folder_name(folder_name, reg_exp):
