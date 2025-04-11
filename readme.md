@@ -13,6 +13,12 @@ AudioTranscTool诞生的原因十分简单，因为ffmpeg对于音频的32bit音
 5. 未来支持使用Asin、Barcode、Catalognumber和ascoutid+专辑名在musicbrainz搜索对应元数据
 6. 未来还会更新别的功能，看我有没有空
 
+### 配置：
+
+在config.toml里可以选择开启哪些功能
+
+现在就只有一个cue分割，true未开启，flase为关闭
+
 ### 使用教程：
 
 首先，确保你的python版本在3.11以上
