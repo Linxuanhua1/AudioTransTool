@@ -30,7 +30,7 @@ is_delete_origin_audio = false  # 是否删除转码前的音频，默认为fals
 
 第二步，下载项目源代码，下载ffmpeg (只需要把ffmpeg里的ffprobe.exe搬到encoders文件夹里就可以了)
 
-第三步，安装项目文件夹里的vcredist_x86.exe
+第三步，安装项目文件夹下lib里的vcredist_x86.exe
 
 第四步，切换终端目录到代码文件夹，在终端里输入
 
@@ -41,7 +41,7 @@ pip install -r requirements.txt
 第五步
 
 ```
-python main.py
+python transcode.py
 ```
 
 接着根据提示，输入需要转码的文件夹路径就可以运行了
