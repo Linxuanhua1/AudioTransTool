@@ -2,7 +2,8 @@
 
 ## 警告！！！！这个项目现在还处于测试阶段，请使用前先复制一份源文件，在转换后对比一下看看有没有出问题！！
 
-AudioTranscTool诞生的原因十分简单，因为ffmpeg对于音频的32bit音频的转码和flac分割存在问题，所以这个脚本是用python基于各个常用音频格式的codec写的，暂时只写了windows端和无损的音频格式转换。
+AudioTranscTool诞生的原因十分简单，因为ffmpeg对于音频的32bit音频的转码和flac分割存在问题，所以这个脚本是用python基于各个常用音频格式的codec写的。
+无法支持mac和linux，部分codec没有发在unix平台下运行的可执行文件。
 
 ### 特点：
 
