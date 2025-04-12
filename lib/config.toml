@@ -1,3 +1,6 @@
 activate_cue_splitting = true   # 是否开启分轨功能，默认为true
-is_delete_single_track = true  # 分轨时是否删除原来的整轨和cue，默认为true
-is_delete_origin_audio = true  # 是否删除转码前的音频，默认为true
+activate_image_transc = true    # 是否开启照片转码，默认为true，转换所有支持格式到jxl
+is_delete_single_track = true   # 分轨时是否删除原来的整轨和cue，默认为true
+is_delete_origin_audio = true   # 是否删除转码前的音频，默认为true
+is_delete_origin_img = true     # 是否删除转码前的图片，默认为true
+max_workers = 8                 # 多进程转码的个数，建议取cpu核心数，多了容易卡

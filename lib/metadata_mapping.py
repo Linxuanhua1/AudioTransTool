@@ -67,7 +67,8 @@ ID3v23_TO_VORBIS = {
     'WPAY': 'WWWPAYMENT',
     'WPUB': 'WWWPUBLISHER',
     'WORS': 'WWWRADIOPAGE',
-    'TYER': 'YEAR'
+    'TYER': 'YEAR',
+    'TDRC': 'YEAR'
 }
 
 ID3v24_TO_VORBIS = {

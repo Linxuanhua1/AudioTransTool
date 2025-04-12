@@ -11,8 +11,9 @@ mac和linux，部分codec没有发在unix平台下运行的可执行文件，还
 2. 支持apev2 (ape, tak)、id3v2.3&4 (wav, tta)、mp4 (m4a)的元数据映射到vorbis comment (flac)。
 3. 支持32bit int wav和32bit in m4a转换到flac。（32bit float wav会被跳过）
 4. 支持自动分轨，基于帧的分割，而不是基于时间，更符合CUESHEET的标准（基于文件名检测，当cue的名字和音频的名字相同时就会分割，仅支持flac分割，脚本里会先把所有支持的无损格式音频转换成flac）
-5. 未来支持使用Asin、Barcode、Catalognumber和ascoutid+专辑名在musicbrainz搜索对应元数据
-6. 未来还会更新别的功能，看我有没有空
+5. 支持使用Catalognumber在musicbrainz搜索对应元数据
+6. 支持转码常见图片格式到jxl，比如webp，png，tiff，jpg，bmp
+7. 未来还会更新别的功能，看我有没有空
 
 ### 配置：
 
@@ -20,8 +21,11 @@ mac和linux，部分codec没有发在unix平台下运行的可执行文件，还
 
 ```
 activate_cue_splitting = true   # 是否开启分轨功能，默认为true
-is_delete_single_track = true  # 分轨时是否删除原来的整轨和cue，默认为true
-is_delete_origin_audio = true  # 是否删除转码前的音频，默认为true
+activate_image_transc = true    # 是否开启照片转码，默认为true，转换所有支持格式到jxl
+is_delete_single_track = true   # 分轨时是否删除原来的整轨和cue，默认为true
+is_delete_origin_audio = true   # 是否删除转码前的音频，默认为true
+is_delete_origin_img = true     # 是否删除转码前的图片，默认为true
+max_workers = 8                 # 多进程转码的个数，建议取cpu核心数，多了容易卡
 ```
 
 ### 使用教程：
