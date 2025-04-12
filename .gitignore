@@ -11,6 +11,6 @@
 .stignore
 .venv
 .stversions
-test
+/test
 ffprobe.exe
 logs
