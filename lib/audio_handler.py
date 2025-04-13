@@ -36,7 +36,6 @@ class AudioHandler:
             cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_entries', 'stream=sample_fmt,codec_name', file_path]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         except subprocess.CalledProcessError as e:
-            print(e.stderr)
             raise Exception('可能是单个文件夹路径超过了260字符，请检查一下')
         data = json.loads(result.stdout)
         sample_fmt = data['streams'][0]['sample_fmt']
@@ -158,13 +157,13 @@ class AudioHandler:
     def worker_wrapper(task):
         try:
             queue, audio_path, handler, config = task
-            setup_worker_logger(logger, queue)
+            if not logger.handlers:
+                setup_worker_logger(logger, queue)
             logger.info(f'即将处理音频{audio_path}')
             handler(audio_path, config['is_delete_origin_audio'])
-            logger.info(f'转换完成')
-            return f"{audio_path} 转码成功"
+            logger.info(f"{audio_path} 转码成功")
         except Exception as e:
-            return f"{task[0]} 转码失败: {e}"
+            logger.error(f"{task[1]} 转码失败: {e}")
 
 
 AUDIO_HANDLERS = {
@@ -420,11 +419,11 @@ class Splitter:
     def worker_wrapper(task):
         try:
             queue, file_path, config, lock = task
-            setup_worker_logger(logger, queue)
+            if not logger.handlers:
+                setup_worker_logger(logger, queue)
             Splitter.split_flac_with_cue(file_path, config['is_delete_single_track'], lock)
-            return f"{file_path} 分轨成功"
         except Exception as e:
-            return f"{task[0]} 分轨失败: {e}"
+            logger.error(f"{task[1]} 分轨失败: {e}")
 
 
 class CueParser:

@@ -76,8 +76,7 @@ class ImageHandler:
         try:
             subprocess.run(cmd, capture_output=True, text=True, check=True)
         except subprocess.CalledProcessError as e:
-            print(e.output)
-            raise Exception('未知错误')
+            raise Exception('可能是单个文件夹路径超过了260字符，请检查一下')
         return f'{root}.jxl'
 
     @staticmethod
@@ -149,11 +148,11 @@ class ImageHandler:
     def worker_wrapper(task):
         try:
             queue, img_path, handler, name, config = task
-            setup_worker_logger(logger, queue)
+            if not logger.handlers:
+                setup_worker_logger(logger, queue)
             ImageHandler.process_image(img_path, handler, name, config)
-            return f"{img_path} 转码成功"
         except Exception as e:
-            return f"{task[0]} 转码失败: {e}"
+            logger.error(f"{task[1]} 图片转码失败: {e}")
 
 
 IMAGE_HANDLER = {
