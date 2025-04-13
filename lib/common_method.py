@@ -108,17 +108,32 @@ def listener_process(queue):
     # 设置终端输出流处理器
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
 
-    # 设置文件输出处理器
+# -------------------------------- 一般日志 ------------------------------------------
+    # 设置文件滚动输出处理器 (按大小滚动)
     now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M")
     log_filename = f'logs/main_{now_str}.log'
     os.makedirs('logs', exist_ok=True)
-    file_handler = logging.FileHandler(log_filename)
+
+    # 使用 RotatingFileHandler，指定最大文件大小和备份文件个数
+    max_log_size = 1024 * 500  # 设置文件最大大小为 500k
+
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_filename, maxBytes=max_log_size)
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)  # 设置文件处理器的日志级别为 DEBUG
 
+# ------------------------------- 错误日志 -------------------------------------------
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M")
+    error_log_filename = f'logs/error_{now_str}.log'
+    # 错误日志文件处理器
+    error_file_handler = logging.FileHandler(error_log_filename)
+    error_file_handler.setFormatter(formatter)
+    error_file_handler.setLevel(logging.ERROR)  # 错误日志的级别是 ERROR
+
+    logger.addHandler(stream_handler)
     logger.addHandler(file_handler)
+    logger.addHandler(error_file_handler)
     logger.setLevel(logging.DEBUG)  # 设置总体日志级别
 
     while True:

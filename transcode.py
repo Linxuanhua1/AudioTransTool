@@ -25,9 +25,8 @@ if __name__ == '__main__':
                     all_audio.append((queue, audio_path, handler, config))
         if all_audio:
             with concurrent.futures.ProcessPoolExecutor(max_workers=config['max_workers']) as executor:
-                for result in tqdm(executor.map(AudioHandler.worker_wrapper, all_audio), total=len(all_audio),
-                                   desc='音频转码中'):
-                    logger.info(result)
+                list(tqdm(executor.map(AudioHandler.worker_wrapper, all_audio), total=len(all_audio),
+                                   desc='音频转码中'))
         else:
             logger.info("没有符合条件的音频需要转码")
         logger.info('音频转码结束')
@@ -44,9 +43,8 @@ if __name__ == '__main__':
                         all_splitting.append((queue, file_path, config, lock))  # 传 manager.Lock()
             if all_splitting:
                 with concurrent.futures.ProcessPoolExecutor(max_workers=config['max_workers']) as executor:
-                    for result in tqdm(executor.map(Splitter.worker_wrapper, all_splitting), total=len(all_splitting),
-                                       desc='音频分轨中'):
-                        logger.info(result)
+                    list(tqdm(executor.map(Splitter.worker_wrapper, all_splitting), total=len(all_splitting),
+                                       desc='音频分轨中'))
             else:
                 logger.info("没有符合条件的音频需要分轨")
             logger.info('音频分轨结束')
@@ -64,8 +62,8 @@ if __name__ == '__main__':
                         all_img.append((queue, img_path, handler, name, config))
             if all_img:
                 with concurrent.futures.ProcessPoolExecutor(max_workers=config['max_workers']) as executor:
-                    for result in tqdm(executor.map(ImageHandler.worker_wrapper, all_img), total=len(all_img), desc='图片转码中'):
-                        logger.info(result)
+                    list(tqdm(executor.map(ImageHandler.worker_wrapper, all_img),
+                                       total=len(all_img), desc='图片转码中'))
             else:
                 logger.info("没有符合条件的图片需要转码")
             logger.info('图片转码结束')
