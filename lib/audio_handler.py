@@ -1,4 +1,4 @@
-import subprocess, json, os, io,re, logging
+import subprocess, json, os, io, re, logging
 import wave
 import mutagen
 from mutagen.flac import Picture
@@ -13,6 +13,7 @@ ALLOWED_SAMPLE_FMT = ['s32', 's32p', 's16', 's16p']
 EXCLUDED_DIRS = ['bk', 'booklet', 'scan', 'scans', 'artwork', 'artworks', 'jacket']
 
 logger = logging.getLogger(__name__)
+
 
 class AudioHandler:
     @staticmethod
@@ -156,13 +157,15 @@ class AudioHandler:
     @staticmethod
     def worker_wrapper(task):
         try:
-            audio_path, handler, config = task
+            queue, audio_path, handler, config = task
+            setup_worker_logger(logger, queue)
             logger.info(f'即将处理音频{audio_path}')
             handler(audio_path, config['is_delete_origin_audio'])
             logger.info(f'转换完成')
             return f"{audio_path} 转码成功"
         except Exception as e:
             return f"{task[0]} 转码失败: {e}"
+
 
 AUDIO_HANDLERS = {
     '.wav': AudioHandler.wav2flac,
@@ -416,11 +419,13 @@ class Splitter:
     @staticmethod
     def worker_wrapper(task):
         try:
-            file_path, config, lock = task
+            queue, file_path, config, lock = task
+            setup_worker_logger(logger, queue)
             Splitter.split_flac_with_cue(file_path, config['is_delete_single_track'], lock)
             return f"{file_path} 分轨成功"
         except Exception as e:
             return f"{task[0]} 分轨失败: {e}"
+
 
 class CueParser:
     @staticmethod

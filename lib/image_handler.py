@@ -1,6 +1,6 @@
 import os, tifffile, subprocess, logging
 from PIL import Image
-from lib.common_method import get_root_dir_and_name
+from lib.common_method import get_root_dir_and_name, setup_worker_logger
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +148,8 @@ class ImageHandler:
     @staticmethod
     def worker_wrapper(task):
         try:
-            img_path, handler, name, config = task
+            queue, img_path, handler, name, config = task
+            setup_worker_logger(logger, queue)
             ImageHandler.process_image(img_path, handler, name, config)
             return f"{img_path} 转码成功"
         except Exception as e:
