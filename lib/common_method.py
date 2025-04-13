@@ -1,4 +1,5 @@
-import os, re, datetime, logging
+import os, re, datetime, logging, multiprocessing
+import logging.handlers
 
 
 def check_input_folder_path(is_double_check=True):
@@ -99,15 +100,50 @@ def fold_catno(nums):
     return f"{prefix}-{start_str}~{suffix}"
 
 
-def setup_logger():
-    now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H")
-    os.makedirs('logs', exist_ok=True)  # 确保目录存在
-    log_filename = f'logs/{now_str}.log'
+def listener_process(queue):
+    logger = logging.getLogger()
+
+    formatter = logging.Formatter('%(asctime)s | %(processName)s | %(levelname)s | %(message)s')
+
+    # 设置终端输出流处理器
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+
+    # 设置文件输出处理器
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M")
+    log_filename = f'logs/main_{now_str}.log'
+    os.makedirs('logs', exist_ok=True)
+    file_handler = logging.FileHandler(log_filename)
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.DEBUG)  # 设置文件处理器的日志级别为 DEBUG
+
+    logger.addHandler(file_handler)
+    logger.setLevel(logging.DEBUG)  # 设置总体日志级别
+
+    while True:
+        record = queue.get()
+        if record is None:  # 退出信号
+            break
+        logger.handle(record)
+
+
+def setup_logger(manager):
+    queue = manager.Queue(-1)
+    listener = multiprocessing.Process(target=listener_process, args=(queue,))
+    listener.start()
+
+    # 创建主进程的logger，设置QueueHandler
     logger = logging.getLogger(__name__)
-    handler = logging.FileHandler(log_filename)
-    formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
-    handler.setFormatter(formatter)
+    handler = logging.handlers.QueueHandler(queue)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
-    return logger
 
+    return logger, queue, listener
+
+
+# 配置日志处理器，在 worker 中使用QueueHandler
+def setup_worker_logger(logger, queue):
+    handler = logging.handlers.QueueHandler(queue)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
