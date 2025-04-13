@@ -140,6 +140,8 @@ class ImageHandler:
         _, ext = os.path.splitext(img_path)
         _, name = get_root_dir_and_name(img_path)
         handler = IMAGE_HANDLER.get(ext)
+        if name + ext == 'Cover.png':
+            return
         if handler:
             if ImageHandler.is_allowed_to_convert(img_path):
                 return img_path, handler, name

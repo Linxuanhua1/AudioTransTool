@@ -31,18 +31,34 @@ class AudioHandler:
         return file_path
 
     @staticmethod
-    def is_allowed_to_convert(file_path):
+    def get_audio_data(file_path) -> dict:
+        """
+        使用ffprobe提取音频文件的基本信息，避免重复代码。
+        """
         try:
-            cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_entries', 'stream=sample_fmt,codec_name', file_path]
+            cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_entries',
+                   'stream=sample_fmt,codec_name,bits_per_raw_sample,channels,sample_rate,duration', file_path]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return json.loads(result.stdout)['streams'][0]
         except subprocess.CalledProcessError as e:
             raise Exception('可能是单个文件夹路径超过了260字符，请检查一下')
-        data = json.loads(result.stdout)
-        sample_fmt = data['streams'][0]['sample_fmt']
-        codec_name = data['streams'][0]['codec_name']
+
+    @staticmethod
+    def is_allowed_to_convert(file_path):
+        data = AudioHandler.get_audio_data(file_path)
+        sample_fmt, codec_name, sample_rate, channels, bits_per_sample, duration \
+            = (data['sample_fmt'], data['codec_name'], int(data['sample_rate']), int(data['channels']),
+            int(data['bits_per_raw_sample']), float(data['duration']))
+
         if codec_name == 'aac':
             logger.info(f'有损音频不会转换')
             return False
+
+        elif codec_name == 'flac':
+            pcm_size = sample_rate * channels * bits_per_sample * duration / 8
+            flac_size = os.path.getsize(file_path)
+            return flac_size / pcm_size > 0.9
+
         if sample_fmt in ALLOWED_SAMPLE_FMT:
             return True
         else:
@@ -61,15 +77,18 @@ class AudioHandler:
         return target
 
     @staticmethod
-    def _direct2flac(file_path: str, is_delete: bool, meta_transfer: Callable[[str, str, str], None]):
+    def _direct2flac(file_path: str, is_delete: bool, meta_transfer: Callable[[str, str, str], None] or None):
         """直接把 WAV 转成 FLAC，并搬运元数据"""
         root, name = get_root_dir_and_name(file_path)
         logger.info(f'正在将转换为 FLAC')
-        AudioHandler._encode2flac(file_path, root, name)
-        meta_transfer(file_path, root, name)
+        target_path = AudioHandler._encode2flac(file_path, root, name)
+        if meta_transfer:
+            meta_transfer(file_path, root, name)
         logger.info(f'成功将元数据从源文件转移到转码后的文件')
         if is_delete:
             os.remove(file_path)
+            if not meta_transfer:
+                os.rename(target_path, file_path)
             logger.info(f'删除源文件')
 
     @staticmethod
@@ -99,6 +118,14 @@ class AudioHandler:
             os.remove(file_path)
             logger.info(f'成功删除源文件')
         logger.info('-' * 100)
+
+    @staticmethod
+    def flac2flac(file_path: str, is_delete_origin_audio: bool):
+        AudioHandler._direct2flac(
+            file_path,
+            is_delete_origin_audio,
+            None
+        )
 
     @staticmethod
     def wav2flac(file_path: str, is_delete_origin_audio: bool):
@@ -172,6 +199,7 @@ AUDIO_HANDLERS = {
     '.ape': AudioHandler.ape2flac,
     '.tak': AudioHandler.tak2flac,
     '.tta': AudioHandler.tta2flac,
+    '.flac': AudioHandler.flac2flac
 }
 
 
@@ -352,22 +380,13 @@ class Splitter:
             return pcm_data[start_byte:]
 
     @staticmethod
-    def get_audio_data(file_path):
-        cmd = ['ffprobe.exe', '-v', 'quiet', '-print_format', 'json', '-show_entries',
-               'stream=bits_per_raw_sample,channels,sample_rate', file_path]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        data = json.loads(result.stdout)['streams'][0]
-        sample_rate, channels, bits_per_sample = int(data['sample_rate']), int(data['channels']), int(
-            data['bits_per_raw_sample'])
-
-        return sample_rate, channels, bits_per_sample
-
-    @staticmethod
     def split_flac_with_cue(file_path, is_delete_single_track, lock):
         source_root, source_name = get_root_dir_and_name(file_path)
         logger.info(f"正在分轨{file_path}")
         tracks = CueParser.paser_cue_data(f'{os.path.join(source_root, source_name)}.cue')
-        sample_rate, channels, bits_per_sample = Splitter.get_audio_data(file_path)
+        data = AudioHandler.get_audio_data(file_path)
+        sample_rate, channels, bits_per_sample \
+            = int(data['sample_rate']), int(data['channels']), int(data['bits_per_raw_sample'])
         logger.info(f"正在将音频转换为pcm数据缓存到内存中")
         process_decode = subprocess.Popen(['flac.exe', '-d', '--stdout', file_path], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
