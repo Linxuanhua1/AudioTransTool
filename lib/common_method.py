@@ -2,10 +2,6 @@ import os, re, datetime, logging, multiprocessing
 import logging.handlers
 
 
-# 全局变量，用来存储错误日志文件处理器
-error_file_handler = None
-
-
 def check_input_folder_path(is_double_check=True):
     while True:
         folder_path = input('请输入文件夹：')
@@ -105,7 +101,6 @@ def fold_catno(nums):
 
 
 def listener_process(queue):
-    global error_file_handler
     logger = logging.getLogger()
 
     formatter = logging.Formatter('%(asctime)s | %(processName)s | %(levelname)s | %(message)s')
@@ -129,14 +124,14 @@ def listener_process(queue):
     file_handler.setLevel(logging.DEBUG)  # 设置文件处理器的日志级别为 DEBUG
 
 # ------------------------------- 错误日志 -------------------------------------------
-    # 创建内存处理器，缓存错误日志
-    memory_handler = logging.handlers.MemoryHandler(capacity=100, target=None)  # 容量设置为100条日志
-    memory_handler.setFormatter(formatter)
-    memory_handler.setLevel(logging.ERROR)  # 只缓存错误日志
+    error_log_filename = f'logs/error_{now_str}.log'
+    error_file_handler = logging.FileHandler(error_log_filename)
+    error_file_handler.setFormatter(formatter)
+    error_file_handler.setLevel(logging.ERROR)
 
     logger.addHandler(stream_handler)
     logger.addHandler(file_handler)
-    logger.addHandler(memory_handler)
+    logger.addHandler(error_file_handler)
     logger.setLevel(logging.DEBUG)  # 设置总体日志级别
 
     while True:
@@ -145,29 +140,6 @@ def listener_process(queue):
             break
         logger.handle(record)
 
-        # 如果内存处理器中有错误日志，则写入单独的错误日志文件
-        if memory_handler.buffer:
-            # 如果 error_file_handler 是 None，表示还没有创建错误日志文件
-            if error_file_handler is None:
-                error_log_filename = f'logs/error_{now_str}.log'
-                os.makedirs('logs', exist_ok=True)
-
-                # 创建文件处理器并配置
-                error_file_handler = logging.FileHandler(error_log_filename)
-                error_file_handler.setFormatter(formatter)
-                error_file_handler.setLevel(logging.ERROR)
-
-                # 将文件处理器添加到 logger
-                error_logger = logging.getLogger("error_logger")
-                error_logger.addHandler(error_file_handler)
-                error_logger.setLevel(logging.ERROR)
-
-            # 将缓存的错误日志写入错误日志文件
-            for record in memory_handler.buffer:
-                error_file_handler.handle(record)
-
-            # 清空内存缓存
-            memory_handler.flush()
 
 def setup_logger(manager):
     queue = manager.Queue(-1)
