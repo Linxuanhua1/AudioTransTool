@@ -2,6 +2,8 @@ import os, tifffile, subprocess, logging
 from PIL import Image
 from lib.common_method import get_root_dir_and_name, setup_worker_logger
 
+os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/encoders/'
+
 logger = logging.getLogger(__name__)
 
 SUPPORTED_COLOR_SPACE = ['L', 'RGB', 'RGBA', 'YCbCr', 'I', 'I;16', 'P', '1', 'LA', 'RGBX']
