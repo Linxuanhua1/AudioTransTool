@@ -46,9 +46,7 @@ class AudioHandler:
     @staticmethod
     def is_allowed_to_convert(file_path):
         data = AudioHandler.get_audio_data(file_path)
-        sample_fmt, codec_name, sample_rate, channels, bits_per_sample, duration \
-            = (data['sample_fmt'], data['codec_name'], int(data['sample_rate']), int(data['channels']),
-            int(data['bits_per_raw_sample']), float(data['duration']))
+        sample_fmt, codec_name, sample_rate, channels, bits_per_sample, duration = data['sample_fmt'], data['codec_name'], int(data['sample_rate']), int(data['channels']), int(data['bits_per_raw_sample']), float(data['duration'])
 
         if codec_name == 'aac':
             logger.info(f'有损音频不会转换')
@@ -385,8 +383,7 @@ class Splitter:
         logger.info(f"正在分轨{file_path}")
         tracks = CueParser.paser_cue_data(f'{os.path.join(source_root, source_name)}.cue')
         data = AudioHandler.get_audio_data(file_path)
-        sample_rate, channels, bits_per_sample \
-            = int(data['sample_rate']), int(data['channels']), int(data['bits_per_raw_sample'])
+        sample_rate, channels, bits_per_sample = int(data['sample_rate']), int(data['channels']), int(data['bits_per_raw_sample'])
         logger.info(f"正在将音频转换为pcm数据缓存到内存中")
         process_decode = subprocess.Popen(['flac.exe', '-d', '--stdout', file_path], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
