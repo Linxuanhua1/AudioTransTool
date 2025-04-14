@@ -125,7 +125,8 @@ def listener_process(queue):
 
 # ------------------------------- 错误日志 -------------------------------------------
     error_log_filename = f'logs/error_{now_str}.log'
-    error_file_handler = logging.FileHandler(error_log_filename)
+    error_file_handler = logging.handlers.RotatingFileHandler(
+        error_log_filename, maxBytes=max_log_size)
     error_file_handler.setFormatter(formatter)
     error_file_handler.setLevel(logging.ERROR)
 
