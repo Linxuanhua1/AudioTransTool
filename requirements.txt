@@ -2,3 +2,5 @@ mutagen
 pillow
 musicbrainzngs
 tifffile
+requests
+beautifulsoup4
