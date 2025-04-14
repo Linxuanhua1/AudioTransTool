@@ -1,6 +1,6 @@
-import musicbrainzngs, os, mutagen
+import musicbrainzngs, os, mutagen, sys
 
-os.environ['path'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd())
+sys.path.append(os.path.dirname(os.getcwd()))
 
 from lib.common_method import check_multi_result, check_input_folder_path
 

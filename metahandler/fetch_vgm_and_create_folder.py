@@ -1,6 +1,6 @@
 import requests, os
 from bs4 import BeautifulSoup
-os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd())
+sys.path.append(os.path.dirname(os.getcwd()))
 from lib.vgm import *
 
 

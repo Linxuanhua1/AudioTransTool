@@ -1,5 +1,5 @@
-import re, os
-os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd())
+import re, os, sys
+sys.path.append(os.path.dirname(os.getcwd()))
 from lib.common_method import check_input_folder_path, unfold_catno, fold_catno
 import mutagen
 
