@@ -1,12 +1,13 @@
-import subprocess, json, os, io, re, logging
-import wave
-import mutagen
+import subprocess, json, os, io, re, logging, wave, mutagen
+from decimal import Decimal
 from mutagen.flac import Picture
 from mutagen.id3._specs import PictureType
 from PIL import Image
 from lib.metadata_mapping import ID3v24_TO_VORBIS, APEV2_TO_VORBIS, MP4_TO_VORBIS, ID3v23_TO_VORBIS
 from lib.common_method import *
 from typing import Callable
+
+os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/encoders/'
 
 ALLOWED_SAMPLE_FMT = ['s32', 's32p', 's16', 's16p']
 
@@ -16,6 +17,29 @@ logger = logging.getLogger(__name__)
 
 
 class AudioHandler:
+    @staticmethod
+    def check_source(folder_path):
+        for file in os.listdir(folder_path):
+            if file.lower().endswith(('.wav', 'flac')):
+                file_path = os.path.join(folder_path, file)
+                audio = mutagen.File(file_path)
+                comment = audio.tags.get('COMMENT')
+                if not comment:
+                    return "WEB"
+                if "JASRAC /" in comment:
+                    label = "MORA"
+                elif "OTOTOY" in comment:
+                    label = "OTOTOY"
+                else:
+                    label = "WEB"
+                return label
+            elif file.lower().endswith((".wma", ".mp3", '.ogg')):
+                return "WEB"
+            elif file.lower().endswith('.m4a'):
+                return "WEB"
+            elif file.lower().endswith(".dsf"):
+                return "ISO转DSF"
+
     @staticmethod
     def tmp_file_save_to_wav(root, track, channels, bits_per_sample, sample_rate, raw):
         filename = f"{track['TRACKNUMBER']} - {track['TITLE']}"
@@ -37,7 +61,7 @@ class AudioHandler:
         """
         try:
             cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_entries',
-                   'stream=sample_fmt,codec_name,bits_per_raw_sample,channels,sample_rate,duration', file_path]
+                   'stream=sample_fmt,codec_name,bits_per_raw_sample,channels,sample_rate,duration,bit_rate', file_path]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             return json.loads(result.stdout)['streams'][0]
         except subprocess.CalledProcessError as e:

@@ -1,5 +1,31 @@
 import os, re, datetime, logging, multiprocessing
 import logging.handlers
+from decimal import Decimal
+
+
+PRIORITY_ORDER = ['.dsf', '.flac', '.wav', '.m4a', '.mp3', '.ogg']
+AUDIO_TYPE_QUALITY = {
+    '.dsf': 3,
+    '.flac': 2,
+    '.wav': 2,
+    '.m4a': 1,
+    '.mp3': 1,
+    '.ogg': 1
+}
+
+
+def custom_safe_filename(name):
+    name = name.replace('/', '／')
+    name = name.replace('?', '？')
+    name = name.replace(':', '：')
+    name = name.replace('\\', '＼')
+    name = name.replace('*', '＊')
+    name = name.replace('"', '＂')
+    name = name.replace('<', '＜')
+    name = name.replace('>', '＞')
+    name = name.replace('|', '｜')
+    name = re.sub(r'\s+$', '', name)  # 去除结尾空格
+    return name.strip()
 
 
 def check_input_folder_path(is_double_check=True):
@@ -161,3 +187,178 @@ def setup_worker_logger(logger, queue):
     handler = logging.handlers.QueueHandler(queue)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
+
+
+def check_folder_file(folder_full_path: str, label: str = None):
+    import sys
+    sys.path.append(os.path.dirname(os.getcwd()))
+    from lib.audio_handler import AudioHandler
+
+    has_log = False
+    has_pic = False
+    has_iso = False
+    has_bdmv = False
+    has_mp4 = False
+    has_mkv = False
+
+    audio_files = []
+
+    for root, dirs, files in os.walk(folder_full_path):
+        for file in files:
+            ext = os.path.splitext(file)[1].lower()
+
+            if ext == '.jxl':
+                has_pic = True
+            elif ext == '.log':
+                has_log = True
+            elif ext in ['.iso', '.vob']:
+                has_iso = True
+            elif ext == '.bdmv':
+                has_bdmv = True
+            elif ext == '.mkv':
+                has_mkv = True
+            elif ext == '.mp4':
+                has_mp4 = True
+
+            # 收集音频文件
+            if ext in AUDIO_TYPE_QUALITY:
+                full_path = os.path.join(root, file)
+                audio_files.append((ext, full_path))
+
+    # 找出最高音质的音频文件
+    best_quality = -1
+    best_info = ("N/A", "N/A")
+    found_formats = set()
+
+    for ext in PRIORITY_ORDER:
+        for file_ext, file_path in audio_files:
+            if file_ext == ext:
+                found_formats.add(file_ext)
+
+                # 如果这个格式更好，就更新 best_info
+                if AUDIO_TYPE_QUALITY[file_ext] > best_quality:
+                    info = AudioHandler.get_audio_data(file_path)
+                    if ext in ['.flac', '.wav']:
+                        sample_rate = f"{Decimal(int(info['sample_rate'])) / 1000}kHz"
+                        bit_depth = f"{int(info['bits_per_raw_sample'])}bit"
+                        best_info = (bit_depth, sample_rate)
+                    elif ext in ['.m4a', '.mp3', '.ogg']:
+                        bitrate = f"{round(Decimal(int(info['bit_rate'])) / 1000)}k"
+                        best_info = ("N/A", bitrate)
+                    elif ext == '.dsf':
+                        sample_rate = f"{Decimal(int(info['bit_rate'])) / 1000000}MHz"
+                        best_info = ("N/A", sample_rate)
+                    best_quality = AUDIO_TYPE_QUALITY[file_ext]
+                break  # 同一种格式只看一个文件就好
+
+    # 拼接格式信息
+    suffix = "[" + "+".join(
+        sorted([fmt[1:] for fmt in found_formats], key=lambda x: PRIORITY_ORDER.index("." + x))
+    )
+
+    if has_mp4:
+        suffix += "+mp4"
+    if has_mkv:
+        suffix += "+mkv"
+    if has_bdmv:
+        suffix += "+bdmv"
+    if has_iso:
+        suffix += "+iso"
+    if has_pic:
+        suffix += "+jxl"
+    suffix += "]"
+    # 标签
+    if label:
+        return suffix, label, best_info
+    elif has_log:
+        label = "EAC"
+    else:
+        label = AudioHandler.check_source(folder_full_path)
+
+    return suffix, label, best_info
+    # has_log = False
+    # has_pic = False
+    # has_iso = False
+    # has_bdmv = False
+    # has_mp4 = False
+    # has_mkv = False
+    # for root, dirs, files in os.walk(folder_full_path):
+    #     for file in files:
+    #         if file.lower().endswith('.jxl'):
+    #             has_pic = True
+    #         if file.lower().endswith('.log'):
+    #             has_log = True
+    #         if file.lower().endswith('.iso'):
+    #             has_iso = True
+    #         if file.lower().endswith('.vob'):
+    #             has_iso = True
+    #         if file.lower().endswith('.bdmv'):
+    #             has_bdmv = True
+    #         if file.lower().endswith('.mkv'):
+    #             has_mkv = True
+    #         if file.lower().endswith('.mp4'):
+    #             has_mp4 = True
+    #         if file.lower().endswith('.flac'):
+    #             suffix = "[flac"
+    #         if file.lower().endswith('.dsf'):
+    #             suffix = "[dsf"
+    #         if file.lower().endswith('.m4a'):
+    #             suffix = "[m4a"
+    #         if file.lower().endswith('.mp3'):
+    #             suffix = "[mp3"
+    #         if file.lower().endswith('.ogg'):
+    #             suffix = "[ogg"
+    #         if file.lower().endswith('.wav'):
+    #             suffix = "[wav"
+    # if has_mp4:
+    #     suffix += "+mp4"
+    # if has_mkv:
+    #     suffix += "+mkv"
+    # if has_bdmv:
+    #     suffix += "+bdmv"
+    # if has_iso:
+    #     suffix += "+iso"
+    # if has_pic:
+    #     suffix += "+jxl"
+    # suffix += "]"
+    # if has_log:
+    #     label = "EAC"
+    # else:
+    #     import sys
+    #     sys.path.append(os.path.dirname(os.getcwd()))
+    #     from lib.audio_handler import AudioHandler
+    #     label = AudioHandler.check_source(folder_full_path)
+    # return suffix, label
+
+# def check_folder_audio(folder_full_path: str):
+#     import sys
+#     sys.path.append(os.path.dirname(os.getcwd()))
+#     from lib.audio_handler import AudioHandler
+#     # 先收集所有音频文件
+#     audio_files = []
+#
+#     for root, dirs, files in os.walk(folder_full_path):
+#         for file in files:
+#             ext = os.path.splitext(file)[1].lower()
+#             if ext in ['.flac', '.m4a', '.mp3', '.ogg', '.dsf', '.wav']:
+#                 full_path = os.path.join(root, file)
+#                 audio_files.append((ext, full_path))
+
+    # 按优先级查找第一个匹配的音频文件
+    for ext in PRIOIRITY_ORDER:
+        for file_ext, file_path in audio_files:
+            if file_ext == ext:
+                info = AudioHandler.get_audio_data(file_path)
+
+                if ext in ['.flac', '.wav']:
+                    sample_rate = f"{Decimal(int(info['sample_rate'])) / 1000}kHz"
+                    bit_depth = f"{int(info['bits_per_raw_sample'])}bit"
+                    return bit_depth, sample_rate
+
+                elif ext in ['.m4a', '.mp3', '.ogg']:
+                    bitrate = f"{round(Decimal(int(info['bit_rate'])) / 1000)}k"
+                    return  "N/A", bitrate
+
+                elif ext == '.dsf':
+                    sample_rate = f"{Decimal(int(info['sample_rate'])) / 1000000}MHz"
+                    return "N/A", sample_rate

@@ -1,8 +1,10 @@
-import re, os, requests, random
+import re, os, requests, random, sys
+sys.path.append(os.path.dirname(os.getcwd()))
 from bs4 import BeautifulSoup
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import sleep
+from lib.common_method import custom_safe_filename
 
 
 def get_base_dir_name(soup):
@@ -12,18 +14,6 @@ def get_base_dir_name(soup):
     base_dir = span.get_text(strip=True)
     return base_dir
 
-def custom_safe_filename(name):
-    name = name.replace('/', '／')
-    name = name.replace('?', '？')
-    name = name.replace(':', '：')
-    name = name.replace('\\', '＼')
-    name = name.replace('*', '＊')
-    name = name.replace('"', '＂')
-    name = name.replace('<', '＜')
-    name = name.replace('>', '＞')
-    name = name.replace('|', '｜')
-    name = re.sub(r'\s+$', '', name)  # 去除结尾空格
-    return name.strip()
 
 def get_pmy_cls(table, pmy_cls):
     for row in table.find_all('tr')[1:]:  # 跳过标题行
