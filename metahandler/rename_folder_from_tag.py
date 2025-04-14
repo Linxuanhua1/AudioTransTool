@@ -1,4 +1,4 @@
-import os, re, sys, mutagen
+import os, sys, mutagen
 sys.path.append(os.path.dirname(os.getcwd()))
 from lib.common_method import check_folder_file, custom_safe_filename
 

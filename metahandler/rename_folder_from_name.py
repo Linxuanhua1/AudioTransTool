@@ -7,7 +7,7 @@ while True:
     folder_path = input("请输入路径：")
 
     # pattern = r'(.*) \[.*?\] (.*)'
-    pattern = r'\[(.*?)\] (.*) \['
+    pattern = r'\[(.*?)\]\[.*?\]\[(.*?)\].*'
 
     for folder in os.listdir(folder_path):
         match = re.match(pattern, folder)
@@ -15,7 +15,9 @@ while True:
             folder_full_path = os.path.join(folder_path, folder)
             suffix, label, best_info = check_folder_file(folder_full_path)
             orig_date = match.group(1)
-            if len(orig_date) == 6:
+            if '.'in orig_date:
+                date = orig_date
+            elif len(orig_date) == 6:
                 prefix = "19" if int(orig_date[:2]) > 50 else "20"
                 date = f'{prefix}{orig_date[:2]}.{orig_date[2:4]}.{orig_date[4:]}'
             else:
