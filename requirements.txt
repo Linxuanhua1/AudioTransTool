@@ -4,3 +4,4 @@ musicbrainzngs
 tifffile
 requests
 beautifulsoup4
+tqdm
