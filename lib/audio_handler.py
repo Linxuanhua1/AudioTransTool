@@ -46,12 +46,14 @@ class AudioHandler:
     @staticmethod
     def is_allowed_to_convert(file_path):
         data = AudioHandler.get_audio_data(file_path)
-        sample_fmt, codec_name, sample_rate, channels, bits_per_sample, duration = data['sample_fmt'], data['codec_name'], int(data['sample_rate']), int(data['channels']), int(data['bits_per_raw_sample']), float(data['duration'])
+        if file_path.endswith('.flac'):
+            sample_fmt, codec_name, sample_rate, channels, bits_per_sample, duration = data['sample_fmt'], data['codec_name'], int(data['sample_rate']), int(data['channels']), int(data['bits_per_raw_sample']), float(data['duration'])
+        else:
+            sample_fmt, codec_name = data['sample_fmt'], data['codec_name']
 
         if codec_name == 'aac':
             logger.info(f'有损音频不会转换')
             return False
-
         elif codec_name == 'flac':
             pcm_size = sample_rate * channels * bits_per_sample * duration / 8
             flac_size = os.path.getsize(file_path)
