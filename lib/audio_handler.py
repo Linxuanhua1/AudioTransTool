@@ -23,7 +23,7 @@ class AudioHandler:
             if file.lower().endswith(('.wav', 'flac')):
                 file_path = os.path.join(folder_path, file)
                 audio = mutagen.File(file_path)
-                comment = audio.tags.get('COMMENT')[0]
+                comment = audio.tags.get('COMMENT')[0] if audio.tags.get('COMMENT') else None
                 if not comment:
                     return "WEB"
                 if "JASRAC /" in comment:

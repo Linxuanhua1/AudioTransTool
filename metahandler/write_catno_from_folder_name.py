@@ -3,18 +3,32 @@ sys.path.append(os.path.dirname(os.getcwd()))
 from lib.common_method import check_input_folder_path, unfold_catno, fold_catno
 import mutagen
 
+def map_pattern():
+    while True:
+        pattern = input('选择匹配的正则表达式：\n'
+                        '1、\\[.*?\\] .*? \\[(.*?)\\]\n'
+                        '2、\\d{4}.\\d{2}.\\d{2} \\[(.*?)\\].*\n'
+                        '请输入数字：')
+        if pattern == '1':
+            pattern = r'\[.*?\] .*? \[(.*?)\]'
+            return pattern
+        elif pattern == '2':
+            pattern = r'\d{4}.\d{2}.\d{2} \[(.*?)\].*'
+            return pattern
+        else:
+            print('输入匹配模式不正确请重新输入')
 
 print('提示输入路径的时候输入#可以更改正则表达式')
-pattern = input('请输入匹配的正则表达式：')
+pattern = map_pattern()
 
 while True:
     folder_path = check_input_folder_path(is_double_check=False)
     if folder_path == '#':
-        pattern = input('请输入匹配的正则表达式：')
+        pattern = map_pattern()
         continue
     # 可选模板
     # \[.*?\] .*? \[(.*?)\]
-    # .*\[(.*?)\].*
+    # \d{4}.\d{2}.\d{2} \[(.*?)\].*
     print('-' * 50)
     for folder in os.listdir(folder_path):
         base_folder = os.path.join(folder_path, folder)
