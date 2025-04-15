@@ -3,12 +3,33 @@ sys.path.append(os.path.dirname(os.getcwd()))
 from lib.common_method import check_folder_file
 
 
+def map_pattern():
+    while True:
+        pattern = input('选择匹配的正则表达式：\n'
+                        '1、(.*) \\[.*?\\] (.*)\n'
+                        '2、\\[(.*?)\\] (.*?) \\[.*?\\].*\n'
+                        '3、\\[(.*?)\\]\\[.*?\\]\\[(.*?)\\].*\n'
+                        '请输入数字：')
+        if pattern == '1':
+            pattern = r'(.*) \[.*?\] (.*)'
+            return pattern
+        elif pattern == '2':
+            pattern = r'\[(.*?)\] (.*?) \[.*?\].*'
+            return pattern
+        elif pattern == '3':
+            pattern = r'\[(.*?)\]\[.*?\]\[(.*?)\].*'
+            return pattern
+        else:
+            print('输入匹配模式不正确请重新输入')
+
+print('提示输入路径的时候输入#可以更改正则表达式')
+pattern = map_pattern()
+
 while True:
     folder_path = input("请输入路径：")
-
-    # pattern = r'(.*) \[.*?\] (.*)'
-    pattern = r'\[(.*?)\]\[.*?\]\[(.*?)\].*'
-
+    if folder_path == '#':
+        pattern = map_pattern()
+        continue
     for folder in os.listdir(folder_path):
         match = re.match(pattern, folder)
         if match:
