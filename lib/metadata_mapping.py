@@ -219,6 +219,7 @@ MP4_TO_VORBIS = {
     'shwm': 'SHOWMOVEMENT',
     'sdes': 'STOREDESCRIPTION',
     '©nam': 'TITLE',
+    '©trk': 'TITLE',
     'sonm': 'TITLESORT',
     'trkn': ['TRACKNUMBER', 'TOTALTRACKS'],
     'tves': 'TVEPISODE',
