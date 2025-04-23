@@ -23,16 +23,21 @@ class AudioHandler:
             if file.lower().endswith(('.wav', 'flac')):
                 file_path = os.path.join(folder_path, file)
                 audio = mutagen.File(file_path)
-                comment = audio.tags.get('COMMENT')[0] if audio.tags.get('COMMENT') else None
+                if audio.tags:
+                    comment = audio.tags.get('COMMENT')[0] if audio.tags.get('COMMENT') else None
+                    qbz_tid = audio.tags.get('QBZ:TID')[0] if audio.tags.get('QBZ:TID') else None
+                else:
+                    return 'WEB'
                 if not comment:
                     return "WEB"
+                if qbz_tid:
+                    return "Qobuz"
                 if "JASRAC /" in comment:
-                    label = "MORA"
+                    return "MORA"
                 elif "OTOTOY" in comment:
-                    label = "OTOTOY"
+                    return "OTOTOY"
                 else:
-                    label = "WEB"
-                return label
+                    return "WEB"
             elif file.lower().endswith((".wma", ".mp3", '.ogg')):
                 return "WEB"
             elif file.lower().endswith('.m4a'):

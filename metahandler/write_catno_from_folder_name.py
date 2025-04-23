@@ -37,7 +37,7 @@ while True:
             if result:
                 log_count = 0
                 catno = result.group(1)
-                if "~" in catno:
+                if "~" in catno or '～' in catno:
                     catno = unfold_catno(catno)
                 print(f'为{base_folder}下的音频写入光盘编号')
                 for file in os.listdir(base_folder):
