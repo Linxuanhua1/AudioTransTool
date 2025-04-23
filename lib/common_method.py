@@ -77,9 +77,8 @@ def handle_repeat_file_name(root, filename, ext, suffix=1):
     return file_path
 
 
-def unfold_catno(s):
-    match = re.match(r"([A-Z]+-\d+)\~(\d+)", s)
-
+def unfold_catno(catno):
+    match = re.match(r"([A-Z]+-\d+)[~～](\d+)", catno)
     prefix, start_full, end_suffix = match.group(1), match.group(1).split('-')[1], match.group(2)
     start_num = int(start_full)
     end_suffix = int(end_suffix)

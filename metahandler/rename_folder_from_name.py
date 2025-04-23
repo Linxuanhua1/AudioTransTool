@@ -9,6 +9,7 @@ def map_pattern():
                         '1、(.*) \\[.*?\\] (.*)\n'
                         '2、\\[(.*?)\\] (.*?) \\[.*?\\].*\n'
                         '3、\\[(.*?)\\]\\[.*?\\]\\[(.*?)\\].*\n'
+                        '4、自定义\n'
                         '请输入数字：')
         if pattern == '1':
             pattern = r'(.*) \[.*?\] (.*)'
@@ -18,6 +19,9 @@ def map_pattern():
             return pattern
         elif pattern == '3':
             pattern = r'\[(.*?)\]\[.*?\]\[(.*?)\].*'
+            return pattern
+        elif pattern == '4':
+            pattern = input("请输入正则表达式：")
             return pattern
         else:
             print('输入匹配模式不正确请重新输入')
