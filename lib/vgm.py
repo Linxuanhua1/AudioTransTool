@@ -158,8 +158,16 @@ def fetch_album_details(i, headers, max_retries=3):
                     cols = row.find_all("td")
                     if len(cols) >= 2:
                         label = cols[0].get_text(strip=True)
-                        value = cols[1].get_text(" ", strip=True)
-                        i[label] = value
+                        if label == "Catalog Number":
+                            # 只提取第一个 <a> 标签的文本
+                            first_catalog = cols[1].find("a")
+                            if first_catalog:
+                                i[label] = first_catalog.get_text(strip=True)
+                            else:
+                                i[label] = cols[1].get_text(" ", strip=True)
+                        else:
+                            value = cols[1].get_text(" ", strip=True)
+                            i[label] = value
             return  # 成功处理，退出函数
 
         except requests.exceptions.RequestException as e:
