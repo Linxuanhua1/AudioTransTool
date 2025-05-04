@@ -168,11 +168,11 @@ class AudioHandler:
 
     @staticmethod
     def m4a2flac(file_path: str, is_delete_origin_audio: bool):
-        with mutagen.File(file_path) as audio:
-            for field in audio.tags.keys():
-                if field not in MP4_TO_VORBIS.keys():
-                    audio.tags.pop(field)  # 如果存在则删除，不存在则忽略
-                audio.save()
+        audio = mutagen.File(file_path)
+        if audio.tags:
+            audio.tags.pop('hdlr', None)  # 如果存在则删除，不存在则忽略
+        audio.save()
+
         AudioHandler._via_wav2flac(
             file_path,
             is_delete_origin_audio,
