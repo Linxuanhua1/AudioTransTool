@@ -1,4 +1,4 @@
-import requests, os
+import requests, os, sys
 from bs4 import BeautifulSoup
 sys.path.append(os.path.dirname(os.getcwd()))
 from lib.vgm import *
