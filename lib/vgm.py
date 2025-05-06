@@ -46,6 +46,7 @@ def get_pmy_cls(table, pmy_cls):
         data_dict['date'] = date
         pmy_cls[type_text].append(data_dict)
 
+
 def fetch_sdy_info(data, headers):
     url = data['url']
     print(f'[sdy] 正在处理 {url}')
@@ -94,6 +95,7 @@ def fetch_sdy_info(data, headers):
         print(f'[sdy] 错误: {url} - {e}')
         return []
 
+
 def get_sdy_cls(pmy_cls, headers):
     all_data = []
     tasks = []
@@ -108,6 +110,7 @@ def get_sdy_cls(pmy_cls, headers):
             all_data.extend(future.result())
 
     return all_data
+
 
 def merge_duplicates(entries):
     title_map = defaultdict(list)
@@ -130,6 +133,7 @@ def merge_duplicates(entries):
 
     return result
 
+
 def mk_dir_from_result(base_dir, result, pattern):
     for item in result:
         type_tag = custom_safe_filename(item['type'])
@@ -138,6 +142,7 @@ def mk_dir_from_result(base_dir, result, pattern):
         title_tag = custom_safe_filename(item['title'])
         catalogue_number_tag = custom_safe_filename(item['Catalog Number'])
         os.makedirs(f"{base_dir}/{type_tag}/{series_tag}/{date_tag} {title_tag} [{catalogue_number_tag}]", exist_ok=True)
+
 
 def fetch_album_details(i, headers, max_retries=3):
     url = i['url']

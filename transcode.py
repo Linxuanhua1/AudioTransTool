@@ -13,7 +13,7 @@ if __name__ == '__main__':
         with open("lib/config.toml", 'rb') as f:
             config = tomllib.load(f)
 
-        folder_path = check_input_folder_path()
+        folder_path = check_input_folder_path(is_double_check=True)
         logger.info('开始音频转码')
         all_audio = []
         for root, dirs, files in os.walk(folder_path):
