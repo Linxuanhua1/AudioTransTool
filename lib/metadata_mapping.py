@@ -228,7 +228,7 @@ MP4_TO_VORBIS = {
     'tvsn': 'TVSEASON',
     'tvsh': 'TVSHOW',
     'sosn': 'TVSHOWSORT',
-    '©lyr': 'UNSYNCEDLYRICS',
+    '©lyr': 'LYRICS',
     '©wrk': 'WORK',
-    '©day': 'YEAR'
+    '©day': 'DATE'
 }

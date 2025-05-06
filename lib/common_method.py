@@ -5,9 +5,9 @@ from decimal import Decimal
 
 PRIORITY_ORDER = ['.dsf', '.flac', '.wav', '.m4a', '.mp3', '.ogg']
 AUDIO_TYPE_QUALITY = {
-    '.dsf': 3,
+    '.dsf': 4,
+    '.wav': 3,
     '.flac': 2,
-    '.wav': 2,
     '.m4a': 1,
     '.mp3': 1,
     '.ogg': 1
@@ -28,10 +28,10 @@ def custom_safe_filename(name):
     return name.strip()
 
 
-def check_input_folder_path(is_double_check=True):
+def check_input_folder_path(is_double_check=False):
     while True:
         folder_path = input('请输入文件夹：')
-        if folder_path == '#':
+        if folder_path in ('#', "$"):
             return folder_path
         if not os.path.isdir(folder_path):
             print('请输入文件夹，而不是文件')
@@ -47,7 +47,7 @@ def check_input_folder_path(is_double_check=True):
                 break
         else:
             break
-    return folder_path
+    return folder_path.strip()
 
 
 def get_root_dir_and_name(file_path) -> tuple[str, str]:
