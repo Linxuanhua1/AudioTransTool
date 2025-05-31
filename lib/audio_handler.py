@@ -26,12 +26,13 @@ class AudioHandler:
                 if audio.tags:
                     comment = audio.tags.get('COMMENT')[0] if audio.tags.get('COMMENT') else None
                     qbz_tid = audio.tags.get('QBZ:TID')[0] if audio.tags.get('QBZ:TID') else None
+                    tidal_url = audio.tags.get('URL')[0] if audio.tags.get('URL') else None
                 else:
                     return 'WEB'
-                if not comment:
-                    return "WEB"
                 if qbz_tid:
                     return "Qobuz"
+                if "tidal" in tidal_url:
+                    return "Tidal"
                 if "JASRAC /" in comment:
                     return "MORA"
                 elif "OTOTOY" in comment:
