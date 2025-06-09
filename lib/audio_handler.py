@@ -24,23 +24,30 @@ class AudioHandler:
                 file_path = os.path.join(folder_path, file)
                 audio = mutagen.File(file_path)
                 if audio.tags:
-                    comment = audio.tags.get('COMMENT')[0] if audio.tags.get('COMMENT') else None
+                    comment = audio.tags.get('COMMENT')[0] if audio.tags.get('COMMENT') else ''
                     qbz_tid = audio.tags.get('QBZ:TID')[0] if audio.tags.get('QBZ:TID') else None
-                    tidal_url = audio.tags.get('URL')[0] if audio.tags.get('URL') else None
+                    url = audio.tags.get('URL')[0] if audio.tags.get('URL') else ''
+                    merchant_name = audio.tags.get('MERCHANTNAME')[0] if audio.tags.get('MERCHANTNAME') else ''
                 else:
                     return 'WEB'
+
                 if qbz_tid:
                     return "Qobuz"
-                if "tidal" in tidal_url:
+
+                if "tidal" in url:
                     return "Tidal"
+
+                if "Amazon" in merchant_name:
+                    return "Amazon"
+
                 if "JASRAC /" in comment:
                     return "MORA"
                 elif "OTOTOY" in comment:
                     return "OTOTOY"
                 elif "bandcamp" in comment:
                     return "Bandcamp"
-                else:
-                    return "WEB"
+
+                return "WEB"
             elif file.lower().endswith((".wma", ".mp3", '.ogg')):
                 return "WEB"
             elif file.lower().endswith('.m4a'):
@@ -358,7 +365,7 @@ class MetaHandler:
                 vorbis_field = field.replace('----:com.apple.iTunes:', '').replace(' ', "_").upper()
             else:
                 vorbis_field = field.replace('----:com.apple.iTunes:', '').replace(' ', "").upper()
-        elif field == 'covr':
+        elif field == 'covr':  # covr字段不做修改，直接返回
             vorbis_field = field
         elif field.startswith('xid'):
              vorbis_field = 'xid'
@@ -384,7 +391,7 @@ class MetaHandler:
             for field, tag in source_audio.tags.items():
                 vorbis_field = MetaHandler._mp4_mapping_to_vorbis(field)
 
-                if isinstance(vorbis_field, list):
+                if isinstance(vorbis_field, list):  # 处理'trkn': [(1, 13)] 'disk': [(1, 1)]
                     for field, metadata in zip(vorbis_field, tag[0]):
                         target_audio[field] = str(metadata)
                 elif vorbis_field == 'xid':
@@ -392,11 +399,13 @@ class MetaHandler:
                         t = t.split(":")
                         target_audio["CONTENTPROVIDER"] = t[0]
                         target_audio[t[1]] = t[2]
-                elif vorbis_field == '©too':
+                elif vorbis_field == 'ENCODEDBY':  # 编码器不需要写入flac的元数据
                     continue
                 else:
                     if vorbis_field == 'covr':
                         MetaHandler._mp4_pic_to_vorbis(tag, target_audio)
+                    elif vorbis_field == "COMPILATION":
+                        target_audio[vorbis_field] = str(int(tag))
                     else:
                         tag = [str(i.decode()) if isinstance(i, bytes) else str(i) for i in tag]
                         target_audio[vorbis_field] = tag

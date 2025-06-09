@@ -188,7 +188,7 @@ def setup_worker_logger(logger, queue):
     logger.setLevel(logging.INFO)
 
 
-def check_folder_file(folder_full_path: str, label: str = None):
+def check_folder_file(folder_full_path: str):
     import sys
     sys.path.append(os.path.dirname(os.getcwd()))
     from lib.audio_handler import AudioHandler
@@ -266,10 +266,9 @@ def check_folder_file(folder_full_path: str, label: str = None):
     if has_pic:
         suffix += "+jxl"
     suffix += "]"
+
     # 标签
-    if label:
-        return suffix, label, best_info
-    elif has_log:
+    if has_log:
         label = "EAC"
     elif best_info[0] == "32bit":
         label = 'e-onkyo'
