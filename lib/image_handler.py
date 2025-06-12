@@ -76,7 +76,7 @@ class ImageHandler:
         root, _ = os.path.splitext(file_path)
         cmd = ['cjxl', '-j', '1', '--container', '1', '-q', '100', '--num_threads=16', f'{file_path}', f'{root}.jxl']
         try:
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
         except subprocess.CalledProcessError as e:
             raise Exception('可能是单个文件夹路径超过了260字符，请检查一下')
         return f'{root}.jxl'

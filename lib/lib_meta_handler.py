@@ -2,6 +2,7 @@ import requests, os, sys, tomllib, musicbrainzngs, mutagen
 from bs4 import BeautifulSoup
 from enum import Enum, auto
 from typing import List, Tuple, Optional
+from mutagen.id3 import TXXX, Encoding
 
 sys.path.append(os.path.dirname(os.getcwd()))
 from lib.vgm import *
@@ -83,6 +84,10 @@ def get_meta_from_musicbrainz():
                         audio = mutagen.File(os.path.join(base_path, file))
                         catno = audio.tags.get('CATALOGNUMBER')
                         break
+                    elif file.endswith((".dsf", ".wav")):
+                        audio = mutagen.File(os.path.join(base_path, file))
+                        catno = audio.tags.get('TXXX:CATALOGNUMBER')
+                        break
                 if catno:
                     result = musicbrainzngs.search_releases(catno=catno[0] if isinstance(catno, list) else catno,
                                                             limit=5)
@@ -92,6 +97,10 @@ def get_meta_from_musicbrainz():
                             if file.endswith(".flac"):
                                 audio = mutagen.File(os.path.join(base_path, file))
                                 audio["MUSICBRAINZ_ALBUMID"] = album_id
+                                audio.save()
+                            elif file.endswith((".dsf", ".wav")):
+                                audio = mutagen.File(os.path.join(base_path, file))
+                                audio.tags.add(TXXX(encoding=Encoding.UTF8, desc='MusicBrainz Album Id', text=album_id))
                                 audio.save()
                         print(f"成功将albumid写入{base_path}下的音频")
                     else:
@@ -107,7 +116,8 @@ def rename_folder_from_name():
                             '1、(.*) \\[.*?\\] (.*)\n'
                             '2、\\[(.*?)\\] (.*?) \\[.*?\\].*\n'
                             '3、\\[(.*?)\\]\\[.*?\\]\\[(.*?)\\].*\n'
-                            '4、自定义\n'
+                            '4、(\\d{6}) \\[.*?\\](.*?)\\[\n'
+                            '5、自定义\n'
                             '请输入数字：')
             if pattern == '1':
                 pattern = r'(.*) \[.*?\] (.*)'
@@ -119,6 +129,9 @@ def rename_folder_from_name():
                 pattern = r'\[(.*?)\]\[.*?\]\[(.*?)\].*'
                 return pattern
             elif pattern == '4':
+                pattern = r'(\d{6}) \[.*?\](.*?)\['
+                return pattern
+            elif pattern == '5':
                 pattern = input("请输入正则表达式：")
                 return pattern
             else:
@@ -205,12 +218,16 @@ def write_catno_from_folder_name():
             pattern = input('选择匹配的正则表达式：\n'
                             '1、\\[.*?\\] .*? \\[(.*?)\\]\n'
                             '2、\\d{4}.\\d{2}.\\d{2} \\[(.*?)\\].*\n'
+                            "3、\\d{6} \\[(.*?)\\].*\n"
                             '请输入数字：')
             if pattern == '1':
                 pattern = r'\[.*?\] .*? \[(.*?)\]'
                 return pattern
             elif pattern == '2':
                 pattern = r'\d{4}.\d{2}.\d{2} \[(.*?)\].*'
+                return pattern
+            elif pattern == '3':
+                pattern = r'\d{6} \[(.*?)\].*'
                 return pattern
             else:
                 print('输入匹配模式不正确请重新输入')
@@ -239,9 +256,13 @@ def write_catno_from_folder_name():
                         catno = unfold_catno(catno)
                     print(f'为{base_folder}下的音频写入光盘编号')
                     for file in os.listdir(base_folder):
-                        if file.endswith(('.flac', '.dsf', '.wav')):
+                        if file.endswith('.flac'):
                             audio = mutagen.File(os.path.join(base_folder, file))
                             audio['CATALOGNUMBER'] = catno
+                            audio.save()
+                        elif file.endswith(('.dsf', '.wav')):
+                            audio = mutagen.File(os.path.join(base_folder, file))
+                            audio.tags.add(TXXX(encoding=Encoding.UTF8, desc='CATALOGNUMBER', text=catno))
                             audio.save()
                         elif file.endswith('.log'):
                             log_count += 1
