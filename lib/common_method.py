@@ -237,9 +237,13 @@ def check_folder_file(folder_full_path: str):
                 # 如果这个格式更好，就更新 best_info
                 if AUDIO_TYPE_QUALITY[file_ext] > best_quality:
                     info = AudioHandler.get_audio_data(file_path)
-                    if ext in ['.flac', '.wav']:
+                    if ext == '.flac':
                         sample_rate = f"{Decimal(int(info['sample_rate'])) / 1000}kHz"
                         bit_depth = f"{int(info['bits_per_raw_sample'])}bit"
+                        best_info = (bit_depth, sample_rate)
+                    elif ext == '.wav':
+                        sample_rate = f"{Decimal(int(info['sample_rate'])) / 1000}kHz"
+                        bit_depth = f"{int(info['bits_per_sample'])}bit"
                         best_info = (bit_depth, sample_rate)
                     elif ext in ['.m4a', '.mp3', '.ogg']:
                         bitrate = f"{round(Decimal(int(info['bit_rate'])) / 1000)}k"

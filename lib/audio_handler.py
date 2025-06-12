@@ -76,8 +76,9 @@ class AudioHandler:
         """
         try:
             cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_entries',
-                   'stream=sample_fmt,codec_name,bits_per_raw_sample,channels,sample_rate,duration,bit_rate', file_path]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                   'stream=sample_fmt,codec_name,bits_per_raw_sample,bits_per_sample,channels,sample_rate,duration,bit_rate', file_path]
+            # ffprobe对于wav格式的处理使用的是bits_per_sample，而不是bits_per_raw_sample
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
             return json.loads(result.stdout)['streams'][0]
         except subprocess.CalledProcessError as e:
             raise Exception('可能是单个文件夹路径超过了260字符，请检查一下')
@@ -109,7 +110,7 @@ class AudioHandler:
         target = handle_repeat_file_name(root, name, 'flac')
         try:
             cmd = ['flac', file_path, '--best', '--threads=16', '-o', target]
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
         except subprocess.CalledProcessError as e:
             logger.error(e.stdout)
             raise Exception('可能是单个文件夹路径超过了260字符，请检查一下')
@@ -143,7 +144,7 @@ class AudioHandler:
 
         logger.info(f'正在将文件转换缓存为WAV')
         cmd = cmd_builder(root, name)
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
         logger.info(f'已生成临时WAV')
 
         logger.info(f'正在将临时WAV转换为 FLAC')
