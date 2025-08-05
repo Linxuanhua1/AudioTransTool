@@ -136,7 +136,7 @@ def listener_process(queue):
 
 # -------------------------------- 一般日志 ------------------------------------------
     # 设置文件滚动输出处理器 (按大小滚动)
-    now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M")
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
     log_filename = f'logs/main_{now_str}.log'
     os.makedirs('logs', exist_ok=True)
 

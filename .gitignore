@@ -16,4 +16,4 @@ ffprobe.exe
 logs
 desktop.ini
 .qsyncclient
-encoders
+bin

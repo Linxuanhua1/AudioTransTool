@@ -1,6 +1,6 @@
 from lib.lib_meta_handler import Action
 import os
-os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.getcwd() + '/encoders/'
+os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.getcwd() + '/bin/'
 
 
 if __name__ == '__main__':
