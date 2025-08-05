@@ -7,11 +7,13 @@ from lib.metadata_mapping import ID3v24_TO_VORBIS, APEV2_TO_VORBIS, MP4_TO_VORBI
 from lib.common_method import *
 from typing import Callable
 
-os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/encoders/'
+os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
 
 ALLOWED_SAMPLE_FMT = ['s32', 's32p', 's16', 's16p']
 
-EXCLUDED_DIRS = ['bk', 'booklet', 'scan', 'scans', 'artwork', 'artworks', 'jacket']
+EXCLUDED_DIRS = ['bk', 'booklet', 'scan', 'scans', 'artwork', 'artworks', 'jacket', '[EAC]', "[WEB]"]
+
+EXCLUDED_TAGS = ["[EAC]", "[WEB]", "[OTOTOY]", "[Qobuz]", "[Tidal]", "[Amazon]", '[AppleMusic]', '[网易云]', "[QQMusic]"]
 
 logger = logging.getLogger(__name__)
 

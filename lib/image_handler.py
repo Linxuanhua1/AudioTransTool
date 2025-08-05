@@ -2,7 +2,7 @@ import os, tifffile, subprocess, logging
 from PIL import Image
 from lib.common_method import get_root_dir_and_name, setup_worker_logger
 
-os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/encoders/'
+os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
 
 logger = logging.getLogger(__name__)
 
