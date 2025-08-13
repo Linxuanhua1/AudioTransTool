@@ -188,8 +188,11 @@ def rename_folder_from_tag():
             for file in os.listdir(folder_full_path):
                 if file.lower().endswith(".flac"):
                     audio = mutagen.File(os.path.join(folder_full_path, file))
-                    date = '.'.join(audio.tags['DATE'][0][:10].split("-"))
-                    album = custom_safe_filename(audio.tags['ALBUM'][0].replace("THE IDOLM@STER CINDERELLA ", ""))
+                    try:
+                        date = '.'.join(re.split(r'[-/]', audio.tags['DATE'][0][:10]))
+                    except KeyError:
+                        date = '.'.join(re.split(r'[-/]', audio.tags['YEAR'][0][:10]))
+                    album = custom_safe_filename(audio.tags['ALBUM'][0])
                     break
 
             new_folder_name = f"[{date}][{label}][{album}][{best_info[0]}{best_info[1]}]{suffix}"
