@@ -119,6 +119,15 @@ class AudioHandler:
         return target
 
     @staticmethod
+    def raw2flac(raw:bytes, output, sample_rate, channels, bps):
+        cmd = ['flac', "--force-raw-format", "--sign=signed", "--endian=little", f'--channels={channels}',
+               f'--sample-rate={sample_rate}', f'--bps={bps}', '-', '--best', '--threads=16', '-o', output]
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+        proc.stdin.write(raw)
+        proc.stdin.close()
+        proc.wait()
+
+    @staticmethod
     def _direct2flac(file_path: str, is_delete: bool, meta_transfer: Callable[[str, str, str], None] or None):
         """直接把 WAV 转成 FLAC，并搬运元数据"""
         root, name = get_root_dir_and_name(file_path)
@@ -146,7 +155,7 @@ class AudioHandler:
 
         logger.info(f'正在将文件转换缓存为WAV')
         cmd = cmd_builder(root, name)
-        subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
         logger.info(f'已生成临时WAV')
 
         logger.info(f'正在将临时WAV转换为 FLAC')
@@ -439,26 +448,23 @@ class Splitter:
         process_decode = subprocess.Popen(['flac.exe', '-d', '--stdout', file_path], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
         pcm_data, _ = process_decode.communicate()
+        pcm_data = pcm_data[44:]  # 跳过wav头文件
         logger.info(f"成功转换音频为pcm数据")
         for i, track in enumerate(tracks):
             try:
                 logger.info(f'正在分割第{i+1}首曲目，曲目名为{track["TITLE"]}')
             except KeyError:
                 logger.info(f'正在分割第{i + 1}首曲目，该音频无曲目名')
-
             start_frame = track['INDEX01']
             end_frame = tracks[i + 1]['INDEX01'] if i < len(tracks) - 1 else None
             raw = Splitter.extract_pcm_segment_frame(pcm_data, sample_rate, bits_per_sample, channels, start_frame,
                                                      end_frame)
-
-            logger.info('正在将曲目转换成wav缓存到硬盘')
+            logger.info('正在将曲目转换成flac')
             with lock:
-                split_audio_path_wav = AudioHandler.tmp_file_save_to_wav(source_root, track, channels, bits_per_sample,
-                                                                     sample_rate, raw)
-                logger.info('缓存成功')
-                split_audio_root, split_audio_name = get_root_dir_and_name(split_audio_path_wav)
-                logger.info('正在将曲目转换成flac')
-                split_audio_path_flac = AudioHandler._encode2flac(split_audio_path_wav, split_audio_root, split_audio_name)
+                filename = f"{track['TRACKNUMBER']} - {track['TITLE']}"
+                filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+                split_audio_path_flac = handle_repeat_file_name(source_root, filename, 'flac')
+                AudioHandler.raw2flac(raw, split_audio_path_flac, sample_rate, channels, bits_per_sample)
             logger.info('成功转换为flac')
             split_audio_flac = mutagen.File(split_audio_path_flac)
             for field, tag in track.items():
@@ -466,8 +472,7 @@ class Splitter:
                     split_audio_flac[field] = str(tag)
             split_audio_flac.save()
             logger.info('成功将cuesheet的元数据写入分轨音频')
-            os.remove(split_audio_path_wav)
-            logger.info('成功删除缓存的wav')
+
         if is_delete_single_track:
             os.remove(f'{os.path.join(source_root, source_name)}.cue')
             os.remove(file_path)

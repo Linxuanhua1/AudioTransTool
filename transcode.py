@@ -21,8 +21,7 @@ if __name__ == '__main__':
             logger.info('开始音频转码')
             all_audio = []
             for root, dirs, files in os.walk(folder_path):
-                dirs[:] = [d for d in dirs if d.lower() not in EXCLUDED_DIRS]
-                if not config['is_skip_compressed_audio']:
+                if config['is_skip_compressed_audio']:
                     dirs[:] = [d for d in dirs if all(tag not in d for tag in EXCLUDED_TAGS)]
                 for file in files:
                     audio_path = os.path.join(root, file)
