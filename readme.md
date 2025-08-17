@@ -23,12 +23,13 @@ mac和linux，部分codec没有发在unix平台下运行的可执行文件，还
 在config.toml里可以选择开启哪些功能
 
 ```
-activate_cue_splitting = true   # 是否开启分轨功能，默认为true
-activate_image_transc = true    # 是否开启照片转码，默认为true，转换所有支持格式到jxl
-is_delete_single_track = true   # 分轨时是否删除原来的整轨和cue，默认为true
-is_delete_origin_audio = true   # 是否删除转码前的音频，默认为true
-is_delete_origin_img = true     # 是否删除转码前的图片，默认为true
-max_workers = 8                 # 多进程转码的个数，建议取cpu核心数，多了容易卡
+activate_cue_splitting = true            # 是否开启分轨功能，默认为true
+activate_image_transc = true             # 是否开启照片转码，默认为true，转换所有支持格式到jxl
+is_delete_single_track = true            # 分轨时是否删除原来的整轨和cue，默认为true
+is_delete_origin_audio = true            # 是否删除转码前的音频，默认为true
+is_delete_origin_img = true              # 是否删除转码前的图片，默认为true
+is_skip_compressed_audio = false         # 是否跳过不可压缩的音频，跳过原理是基于文件夹的标签
+max_workers = 8                          # 多进程转码的个数，建议取cpu核心数，多了容易卡
 separators = ["/", "&", ", ", "; ", " _ ", " / ", "、"]                   # 分隔符自定义
 ```
 
@@ -61,7 +62,7 @@ meta_handler是一些用来批处理元数据的小工具
 包含以下几个功能：
 
 1. 分割音频的艺术家、专辑艺术家和编曲家
-2. 删除musictag导致的m4a元数据损坏
+2. 删除musictag导致的m4a元数据损坏的字段hdlr
 3. 字符串去重
 4. 从vgm拉取系列数据并创建对应文件夹
 5. 根据光盘编号从musicbrainz拉取数据
@@ -69,8 +70,8 @@ meta_handler是一些用来批处理元数据的小工具
 7. 根据歌曲标签重命名文件夹
 8. （未完成）根据文件夹下的.txt和.log的文件名写入音频的光盘编号标签
 9. 提取文件夹名中的光盘编号写入音频标签
-
-使用方法：
+0. 退出
+输入数字: 
 
 ```
 python meta_handler.py
