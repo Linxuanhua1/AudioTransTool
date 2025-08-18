@@ -5,7 +5,7 @@ from lib.image_handler import ImageHandler
 from lib.common_method import check_input_folder_path, setup_logger
 
 
-if __name__ == '__main__':
+def main():
     with multiprocessing.Manager() as manager:  # 没什么别的作用，仅用于生成多进程队列
         os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.getcwd() + '/bin/'
         logger, queue, listener = setup_logger(manager)
@@ -21,6 +21,8 @@ if __name__ == '__main__':
             logger.info('开始音频转码')
             all_audio = []
             for root, dirs, files in os.walk(folder_path):
+                #  跳过图片文件夹
+                dirs[:] = [d for d in dirs if all(tag not in d for tag in EXCLUDED_DIRS)]
                 if config['is_skip_compressed_audio']:
                     dirs[:] = [d for d in dirs if all(tag not in d for tag in EXCLUDED_TAGS)]
                 for file in files:
@@ -76,3 +78,7 @@ if __name__ == '__main__':
 
         queue.put_nowait(None)
         listener.join()
+
+
+if __name__ == '__main__':
+    main()

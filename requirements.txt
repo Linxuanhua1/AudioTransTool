@@ -5,3 +5,4 @@ tifffile
 requests
 beautifulsoup4
 tqdm
+concurrent-log-handler
