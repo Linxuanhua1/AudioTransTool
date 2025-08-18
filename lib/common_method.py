@@ -1,4 +1,5 @@
-import os, re, datetime, logging, multiprocessing
+import os, re, datetime, logging, multiprocessing, sys
+from concurrent_log_handler import ConcurrentRotatingFileHandler
 import logging.handlers
 from decimal import Decimal
 
@@ -131,8 +132,13 @@ def listener_process(queue):
     formatter = logging.Formatter('%(asctime)s | %(processName)s | %(levelname)s | %(message)s')
 
     # 设置终端输出流处理器
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setStream(sys.stdout)
+    # 在Windows上可能需要重新配置stdout
+    if sys.platform.startswith('win'):
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    console_handler.setFormatter(formatter)
 
 # -------------------------------- 一般日志 ------------------------------------------
     # 设置文件滚动输出处理器 (按大小滚动)
@@ -143,19 +149,19 @@ def listener_process(queue):
     # 使用 RotatingFileHandler，指定最大文件大小和备份文件个数
     max_log_size = 1024 * 500  # 设置文件最大大小为 500k
 
-    file_handler = logging.handlers.RotatingFileHandler(
-        log_filename, maxBytes=max_log_size)
+    file_handler = ConcurrentRotatingFileHandler(
+        log_filename, maxBytes=max_log_size, encoding='utf-8')
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)  # 设置文件处理器的日志级别为 DEBUG
 
 # ------------------------------- 错误日志 -------------------------------------------
     error_log_filename = f'logs/error_{now_str}.log'
-    error_file_handler = logging.handlers.RotatingFileHandler(
-        error_log_filename, maxBytes=max_log_size)
+    error_file_handler = ConcurrentRotatingFileHandler(
+        error_log_filename, maxBytes=max_log_size, encoding='utf-8')
     error_file_handler.setFormatter(formatter)
     error_file_handler.setLevel(logging.ERROR)
 
-    logger.addHandler(stream_handler)
+    logger.addHandler(console_handler)
     logger.addHandler(file_handler)
     logger.addHandler(error_file_handler)
     logger.setLevel(logging.DEBUG)  # 设置总体日志级别

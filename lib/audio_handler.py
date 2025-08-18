@@ -11,7 +11,7 @@ os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd
 
 ALLOWED_SAMPLE_FMT = ['s32', 's32p', 's16', 's16p']
 
-EXCLUDED_DIRS = ['bk', 'booklet', 'scan', 'scans', 'artwork', 'artworks', 'jacket', '[EAC]', "[WEB]"]
+EXCLUDED_DIRS = ['bk', 'booklet', 'scan', 'scans', 'artwork', 'artworks', 'jacket']
 
 EXCLUDED_TAGS = ["[EAC]", "[WEB]", "[OTOTOY]", "[Qobuz]", "[Tidal]", "[Amazon]", '[AppleMusic]', '[网易云]', "[QQMusic]"]
 
@@ -73,9 +73,7 @@ class AudioHandler:
 
     @staticmethod
     def get_audio_data(file_path) -> dict:
-        """
-        使用ffprobe提取音频文件的基本信息，避免重复代码。
-        """
+        """使用ffprobe提取音频文件的基本信息"""
         try:
             cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_entries',
                    'stream=sample_fmt,codec_name,bits_per_raw_sample,bits_per_sample,channels,sample_rate,duration,bit_rate', file_path]
@@ -94,7 +92,7 @@ class AudioHandler:
             sample_fmt, codec_name = data['sample_fmt'], data['codec_name']
 
         if codec_name == 'aac':
-            logger.info(f'有损音频不会转换')
+            logger.info(f'{file_path}是有损音频不会转换')
             return False
         elif codec_name == 'flac':
             pcm_size = sample_rate * channels * bits_per_sample * duration / 8
@@ -108,124 +106,105 @@ class AudioHandler:
             return False
 
     @staticmethod
-    def _encode2flac(file_path, root, name):
-        target = handle_repeat_file_name(root, name, 'flac')
+    def _file_encode2flac(file_path, target_path):
         try:
-            cmd = ['flac', file_path, '--best', '--threads=16', '-o', target]
+            cmd = ['flac', file_path, '--best', '--threads=16', '-o', target_path]
             subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
         except subprocess.CalledProcessError as e:
             logger.error(e.stdout)
             raise Exception('可能是单个文件夹路径超过了260字符，请检查一下')
-        return target
 
     @staticmethod
-    def raw2flac(raw:bytes, output, sample_rate, channels, bps):
+    def pcm2flac(raw:bytes, output, sample_rate, channels, bps):
         cmd = ['flac', "--force-raw-format", "--sign=signed", "--endian=little", f'--channels={channels}',
                f'--sample-rate={sample_rate}', f'--bps={bps}', '-', '--best', '--threads=16', '-o', output]
-        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-        proc.stdin.write(raw)
-        proc.stdin.close()
-        proc.wait()
+        proc_encode = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+        proc_encode.stdin.write(raw)
+        proc_encode.stdin.close()
+        proc_encode.wait()
 
     @staticmethod
-    def _direct2flac(file_path: str, is_delete: bool, meta_transfer: Callable[[str, str, str], None] or None):
-        """直接把 WAV 转成 FLAC，并搬运元数据"""
+    def _wav_bytes2flac(wav_data:bytes, target_path):
+        cmd = ['flac', '-', '--best', '--threads=16', '-o', target_path]
+        proc_encode = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+        proc_encode.stdin.write(wav_data)
+        proc_encode.stdin.close()
+        proc_encode.wait()
+
+    @staticmethod
+    def _file_direct2flac(file_path: str, is_del_source_audio: bool, meta_transfer: Callable[[mutagen, mutagen], None] or None):
+        """直接把 WAV或者 FLAC0 转成 FLAC8，并搬运元数据"""
         root, name = get_root_dir_and_name(file_path)
-        logger.info(f'正在将转换为 FLAC')
-        target_path = AudioHandler._encode2flac(file_path, root, name)
-        if meta_transfer:
-            meta_transfer(file_path, root, name)
+        target_path = handle_repeat_file_name(root, name, 'flac')
+
+        logger.info(f'正在将转换为 FLAC8')
+        AudioHandler._file_encode2flac(file_path, target_path)
+
+        source_audio = mutagen.File(file_path)
+        target_audio = mutagen.File(target_path)
+        if meta_transfer:  # flac转flac不需要手动迁移元数据
+            meta_transfer(source_audio, target_audio)
         logger.info(f'成功将元数据从源文件转移到转码后的文件')
-        if is_delete:
+        if is_del_source_audio:
             os.remove(file_path)
-            if not meta_transfer:
+            if not meta_transfer:  # flac文件肯定会重名，所以删除后改回原名
                 os.rename(target_path, file_path)
-            logger.info(f'删除源文件')
+            logger.info(f'成功删除源文件')
 
     @staticmethod
-    def _via_wav2flac(
-        file_path: str,
-        is_delete: bool,
-        cmd_builder: Callable[[str, str], list],
-        meta_transfer: Callable[[str, str, str], None]
-    ):
-        """先用外部命令把任意格式转成 WAV，再转 FLAC 并搬元数据"""
+    def _via_wav2flac(file_path: str, is_del_source_audio: bool, cmd: list, meta_transfer: Callable[[mutagen, mutagen], None]):
+        """先用外部命令把任意格式转成 WAV，再转 FLAC 并复制元数据"""
         root, name = get_root_dir_and_name(file_path)
-        wav_path = os.path.join(root, f'{name}.wav')
+        target_path = handle_repeat_file_name(root, name, 'flac')
 
-        logger.info(f'正在将文件转换缓存为WAV')
-        cmd = cmd_builder(root, name)
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
-        logger.info(f'已生成临时WAV')
+        logger.info(f'正在将文件转换为WAV，缓存到内存中')
+        proc_decode = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        wav_data, _ = proc_decode.communicate()
+        logger.info(f'已成功缓存')
+        AudioHandler._wav_bytes2flac(wav_data, target_path)
+        logger.info(f'正在将内存中的WAV转换为FLAC')
 
-        logger.info(f'正在将临时WAV转换为 FLAC')
-        AudioHandler._encode2flac(wav_path, root, name)
-        meta_transfer(file_path, root, name)
+        source_audio = mutagen.File(file_path)
+        target_audio = mutagen.File(target_path)
+        meta_transfer(source_audio, target_audio)
         logger.info(f'成功将元数据从源文件转移到转码后的FLAC文件上')
 
-        os.remove(wav_path)
-        logger.info(f'成功删除临时文件')
-        if is_delete:
+        if is_del_source_audio:
             os.remove(file_path)
             logger.info(f'成功删除源文件')
         logger.info('-' * 100)
 
     @staticmethod
     def flac2flac(file_path: str, is_delete_origin_audio: bool):
-        AudioHandler._direct2flac(
-            file_path,
-            is_delete_origin_audio,
-            None
-        )
+        AudioHandler._file_direct2flac(file_path, is_delete_origin_audio,None)
 
     @staticmethod
     def wav2flac(file_path: str, is_delete_origin_audio: bool):
-        AudioHandler._direct2flac(
-            file_path,
-            is_delete_origin_audio,
-            MetaHandler.id3_tag_to_vorbis
-        )
+        AudioHandler._file_direct2flac(file_path, is_delete_origin_audio, MetaHandler.id3_tag_to_vorbis)
 
     @staticmethod
-    def m4a2flac(file_path: str, is_delete_origin_audio: bool):
+    def m4a2flac(file_path: str, is_del_source_audio: bool):
         audio = mutagen.File(file_path)
         if audio.tags:
             audio.tags.pop('hdlr', None)  # 如果存在则删除，不存在则忽略
         audio.save()
-
-        AudioHandler._via_wav2flac(
-            file_path,
-            is_delete_origin_audio,
-            lambda root, name: ['refalac', '-D', file_path, '-o', os.path.join(root, f'{name}.wav')],
-            MetaHandler.mp4_tag_to_vorbis
-        )
+        d_cmd = ['refalac', '-D', file_path, '-o', '-']
+        AudioHandler._via_wav2flac(file_path, is_del_source_audio, d_cmd, MetaHandler.mp4_tag_to_vorbis)
 
     @staticmethod
-    def ape2flac(file_path: str, is_delete_origin_audio: bool):
-        AudioHandler._via_wav2flac(
-            file_path,
-            is_delete_origin_audio,
-            lambda root, name: ['mac', file_path, os.path.join(root, f'{name}.wav'), '-d', '-threads=16'],
-            MetaHandler.apev2_tag_to_vorbis
-        )
+    def ape2flac(file_path: str, is_del_source_audio: bool):
+        d_cmd = ['mac', file_path, '-', '-d']
+        AudioHandler._via_wav2flac(file_path, is_del_source_audio, d_cmd, MetaHandler.apev2_tag_to_vorbis)
 
     @staticmethod
-    def tak2flac(file_path: str, is_delete_origin_audio: bool):
-        AudioHandler._via_wav2flac(
-            file_path,
-            is_delete_origin_audio,
-            lambda root, name: ['Takc', '-d', file_path, os.path.join(root, f'{name}.wav')],
-            MetaHandler.apev2_tag_to_vorbis
-        )
+    def tak2flac(file_path: str, is_del_source_audio: bool):
+        d_cmd = ['Takc', '-d', file_path, '-']
+        AudioHandler._via_wav2flac(file_path, is_del_source_audio, d_cmd, MetaHandler.apev2_tag_to_vorbis)
 
     @staticmethod
-    def tta2flac(file_path: str, is_delete_origin_audio: bool):
-        AudioHandler._via_wav2flac(
-            file_path,
-            is_delete_origin_audio,
-            lambda root, name: ['ttaenc', '-d', file_path, os.path.join(root, f'{name}.wav')],
-            MetaHandler.id3_tag_to_vorbis
-        )
+    def tta2flac(file_path: str, is_del_source_audio: bool):
+        d_cmd = ['ttaenc', '-d', file_path, '-']
+        AudioHandler._via_wav2flac(file_path, is_del_source_audio, d_cmd, MetaHandler.id3_tag_to_vorbis)
 
     @staticmethod
     def append_task(audio_path):
@@ -243,7 +222,7 @@ class AudioHandler:
             if not logger.handlers:
                 setup_worker_logger(logger, queue)
             logger.info(f'即将处理音频{audio_path}')
-            handler(audio_path, config['is_delete_origin_audio'])
+            handler(audio_path, config['is_del_source_audio'])
             logger.info(f"{audio_path} 转码成功")
         except Exception as e:
             logger.error(f"{task[1]} 转码失败: {e}")
@@ -314,9 +293,7 @@ class MetaHandler:
         return vorbis_field
 
     @staticmethod
-    def id3_tag_to_vorbis(file_path, root, name) -> None:
-        source_audio = mutagen.File(file_path)
-        target_audio = mutagen.File(f'{os.path.join(root, name)}.flac')
+    def id3_tag_to_vorbis(source_audio, target_audio) -> None:
         try:
             version = source_audio.tags.version[1]
         except AttributeError:
@@ -352,9 +329,7 @@ class MetaHandler:
         target_audio.add_picture(pic)
 
     @staticmethod
-    def apev2_tag_to_vorbis(file_path, root, name) -> None:
-        source_audio = mutagen.File(file_path)
-        target_audio = mutagen.File(f'{os.path.join(root, name)}.flac')
+    def apev2_tag_to_vorbis(source_audio, target_audio) -> None:
         if source_audio.tags:
             for field, tag in source_audio.tags.items():
                 if field.startswith('Cover Art'):
@@ -396,9 +371,7 @@ class MetaHandler:
             target_audio.add_picture(pic)
 
     @staticmethod
-    def mp4_tag_to_vorbis(file_path, root, name):
-        source_audio = mutagen.File(file_path)
-        target_audio = mutagen.File(f'{os.path.join(root, name)}.flac')
+    def mp4_tag_to_vorbis(source_audio, target_audio):
         if source_audio.tags:
             for field, tag in source_audio.tags.items():
                 vorbis_field = MetaHandler._mp4_mapping_to_vorbis(field)
@@ -464,7 +437,7 @@ class Splitter:
                 filename = f"{track['TRACKNUMBER']} - {track['TITLE']}"
                 filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
                 split_audio_path_flac = handle_repeat_file_name(source_root, filename, 'flac')
-                AudioHandler.raw2flac(raw, split_audio_path_flac, sample_rate, channels, bits_per_sample)
+                AudioHandler.pcm2flac(raw, split_audio_path_flac, sample_rate, channels, bits_per_sample)
             logger.info('成功转换为flac')
             split_audio_flac = mutagen.File(split_audio_path_flac)
             for field, tag in track.items():

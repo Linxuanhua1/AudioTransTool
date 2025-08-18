@@ -82,18 +82,18 @@ class ImageHandler:
         return f'{root}.jxl'
 
     @staticmethod
-    def jpg_png2jxl(file_path, is_delete_origin_img):
+    def jpg_png2jxl(file_path, is_del_source_img):
         logger.info('正在将图片转换为jxl')
         output_path = ImageHandler._encode_jxl(file_path)
         logger.info('成功转换为jxl')
         ImageHandler._copy_metadata(file_path, output_path)
         logger.info('成功复制源图片的exif和xmp信息到jxl文件')
-        if is_delete_origin_img:
+        if is_del_source_img:
             os.remove(file_path)
             logger.info(f"成功删除源文件")
 
     @staticmethod
-    def bmp_webp_tif2jxl(file_path, is_delete_origin_img):
+    def bmp_webp_tif2jxl(file_path, is_del_source_img):
         logger.info('正在将图片转换为png缓存')
         tmp_png_path = ImageHandler._bmp_webp_tif2png(file_path)
         logger.info('缓存成功')
@@ -104,7 +104,7 @@ class ImageHandler:
         logger.info('成功复制源图片的exif和xmp信息到jxl文件')
         os.remove(tmp_png_path)
         logger.info(f"成功删除缓存文件")
-        if is_delete_origin_img:
+        if is_del_source_img:
             os.remove(file_path)
             logger.info(f"成功删除源文件")
 
@@ -133,7 +133,7 @@ class ImageHandler:
         if name.lower() == 'cover':
             ImageHandler.cover2png(img_path)
         else:
-            handler(img_path, config['is_delete_origin_img'])
+            handler(img_path, config['is_del_source_img'])
         logger.info(f'转换完成')
         logger.info('-' * 100)
 
