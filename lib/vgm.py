@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import sleep
-from lib.common_method import custom_safe_filename
+from lib.utils import custom_safe_filename
 
 
 def get_base_dir_name(soup):
