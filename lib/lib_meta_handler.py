@@ -1,12 +1,13 @@
 import requests, os, sys, tomllib, musicbrainzngs, mutagen
 from bs4 import BeautifulSoup
-from enum import Enum, auto
+from enum import Enum
 from typing import List, Tuple, Optional
 from mutagen.id3 import TXXX, Encoding
 
 sys.path.append(os.path.dirname(os.getcwd()))
 from lib.vgm import *
-from lib.common_method import check_multi_result, check_input_folder_path, check_folder_file, custom_safe_filename, unfold_catno, fold_catno
+from lib.utils import check_multi_result, check_input_folder_path, custom_safe_filename, unfold_catno, fold_catno
+from lib.folder_info import analyze_folder_file
 
 
 musicbrainzngs.set_useragent("MyMusicApp","1.0","your@email.com")
@@ -153,7 +154,7 @@ def rename_folder_from_name():
             match = re.match(pattern, folder)
             if match:
                 folder_full_path = os.path.join(folder_path, folder)
-                suffix, label, best_info = check_folder_file(folder_full_path)
+                suffix, label, best_info = analyze_folder_file(folder_full_path)
                 orig_date = match.group(1)
                 if '.' in orig_date:
                     date = orig_date
@@ -184,7 +185,7 @@ def rename_folder_from_tag():
             return
         for folder in os.listdir(folder_path):
             folder_full_path = os.path.join(folder_path, folder)
-            suffix, label, best_info = check_folder_file(folder_full_path)
+            suffix, label, best_info = analyze_folder_file(folder_full_path)
             for file in os.listdir(folder_full_path):
                 if file.lower().endswith(".flac"):
                     audio = mutagen.File(os.path.join(folder_full_path, file))
@@ -194,8 +195,18 @@ def rename_folder_from_tag():
                         date = '.'.join(re.split(r'[-/]', audio.tags['YEAR'][0][:10]))
                     album = custom_safe_filename(audio.tags['ALBUM'][0])
                     break
-
-            new_folder_name = f"[{date}][{label}][{album}][{best_info[0]}{best_info[1]}]{suffix}"
+                elif file.lower().endswith('.dsf'):
+                    audio = mutagen.File(os.path.join(folder_full_path, file))
+                    try:
+                        date = '.'.join(re.split(r'[-/]', str(audio.tags['TDAT'][0])[:10]))
+                    except KeyError:
+                        date = '.'.join(re.split(r'[-/]', str(audio.tags['TDRC'][0])[:10]))
+                    album = custom_safe_filename(audio.tags['TALB'][0])
+                    break
+            if best_info[0] == 'N/A':
+                new_folder_name = f"[{date}][{label}][{album}][{best_info[1]}]{suffix}"
+            else:
+                new_folder_name = f"[{date}][{label}][{album}][{best_info[0]}{best_info[1]}]{suffix}"
             new_folder_full_path = os.path.join(folder_path, new_folder_name)
             print(f"旧文件夹名：{folder}")
             print(f"新文件夹名：{new_folder_name}")
@@ -259,15 +270,15 @@ def write_catno_from_folder_name():
                         catno = unfold_catno(catno)
                     print(f'为{base_folder}下的音频写入光盘编号')
                     for file in os.listdir(base_folder):
-                        if file.endswith('.flac'):
+                        if file.lower().endswith('.flac'):
                             audio = mutagen.File(os.path.join(base_folder, file))
                             audio['CATALOGNUMBER'] = catno
                             audio.save()
-                        elif file.endswith(('.dsf', '.wav')):
+                        elif file.lower().endswith(('.dsf', '.wav')):
                             audio = mutagen.File(os.path.join(base_folder, file))
                             audio.tags.add(TXXX(encoding=Encoding.UTF8, desc='CATALOGNUMBER', text=catno))
                             audio.save()
-                        elif file.endswith('.log'):
+                        elif file.lower().endswith('.log'):
                             log_count += 1
                             tmp_log_path = os.path.join(base_folder, file)
                     if log_count == 1:
