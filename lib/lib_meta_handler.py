@@ -187,7 +187,7 @@ def rename_folder_from_tag():
             folder_full_path = os.path.join(folder_path, folder)
             suffix, label, best_info = analyze_folder_file(folder_full_path)
             for file in os.listdir(folder_full_path):
-                if file.lower().endswith(".flac"):
+                if file.lower().endswith((".flac", '.ogg')):
                     audio = mutagen.File(os.path.join(folder_full_path, file))
                     try:
                         date = '.'.join(re.split(r'[-/]', audio.tags['DATE'][0][:10]))
@@ -195,7 +195,7 @@ def rename_folder_from_tag():
                         date = '.'.join(re.split(r'[-/]', audio.tags['YEAR'][0][:10]))
                     album = custom_safe_filename(audio.tags['ALBUM'][0])
                     break
-                elif file.lower().endswith('.dsf'):
+                elif file.lower().endswith(('.dsf', '.wav')):
                     audio = mutagen.File(os.path.join(folder_full_path, file))
                     try:
                         date = '.'.join(re.split(r'[-/]', str(audio.tags['TDAT'][0])[:10]))
@@ -233,6 +233,7 @@ def write_catno_from_folder_name():
                             '1、\\[.*?\\] .*? \\[(.*?)\\]\n'
                             '2、\\d{4}.\\d{2}.\\d{2} \\[(.*?)\\].*\n'
                             "3、\\d{6} \\[(.*?)\\].*\n"
+                            "4、.*?\\[(.*?)\\].*\n"
                             '请输入数字：')
             if pattern == '1':
                 pattern = r'\[.*?\] .*? \[(.*?)\]'
@@ -242,6 +243,9 @@ def write_catno_from_folder_name():
                 return pattern
             elif pattern == '3':
                 pattern = r'\d{6} \[(.*?)\].*'
+                return pattern
+            elif pattern == "4":
+                pattern = r'.*?\[(.*?)\].*'
                 return pattern
             else:
                 print('输入匹配模式不正确请重新输入')

@@ -132,7 +132,6 @@ class TaskManager:
         for root, dirs, files in os.walk(folder_path):
             # 音频转码需要跳过特定目录
             if task_config.task_type == TaskType.AUDIO_CONVERT:
-                dirs[:] = [d for d in dirs if all(tag not in d for tag in self.config['AUDIO_TRACS_EXCLUDED_DIRS'])]
                 if self.config['is_skip_compressed_audio']:
                     dirs[:] = [d for d in dirs if all(tag not in d for tag in self.config['AUDIO_TRACS_EXCLUDED_TAGS'])]
 
@@ -170,7 +169,7 @@ class TaskManager:
         """收集图片转码任务"""
         _, ext = os.path.splitext(file_path)
         _, name = get_root_dir_and_name(file_path)
-        handler = IMAGE_HANDLER.get(ext)
+        handler = IMAGE_HANDLER.get(ext.lower())
 
         # 跳过已经是目标格式的封面
         if name + ext == 'Cover.png':
