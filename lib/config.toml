@@ -5,7 +5,6 @@ is_del_source_audio = true               # 是否删除转码前的音频，默�
 is_del_source_img = true                 # 是否删除转码前的图片，默认为true
 is_skip_compressed_audio = false         # 是否跳过不可压缩的音频，跳过原理是基于文件夹的标签
 max_workers = 8                          # 多进程转码的个数，建议取cpu核心数，多了容易卡
-separators = ["/", "&", ", ", "; ", " _ ", " / ", "、"]                   # 分隔符自定义
-AUDIO_TRACS_EXCLUDED_DIRS = ['bk', 'booklet', 'scan', 'scans', 'artwork', 'artworks', 'jacket']  # 音频转码时跳过的文件夹
-AUDIO_TRACS_EXCLUDED_TAGS = ["[EAC]", "[WEB]", "[OTOTOY]", "[Qobuz]", "[Tidal]", "[Amazon]", '[AppleMusic]', '[网易云]', "[QQMusic]"]
+separators = ["/", "&", ", ", "; ", " _ ", " / ", "、", " feat. "]                   # 分隔符自定义
+AUDIO_TRACS_EXCLUDED_TAGS = []
 # 音频转码时，当文件夹包含列表里的字符串时跳过转码

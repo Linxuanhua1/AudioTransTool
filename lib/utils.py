@@ -2,17 +2,7 @@ import os, re
 
 
 def custom_safe_filename(name):
-    name = name.replace('/', '／')
-    name = name.replace('?', '？')
-    name = name.replace(':', '：')
-    name = name.replace('\\', '＼')
-    name = name.replace('*', '＊')
-    name = name.replace('"', '＂')
-    name = name.replace('<', '＜')
-    name = name.replace('>', '＞')
-    name = name.replace('|', '｜')
-    name = re.sub(r'\s+$', '', name)  # 去除结尾空格
-    return name.strip()
+    return name.translate(str.maketrans('/?:\\*"<>|', '／？：＼＊＂＜＞｜')).strip()
 
 
 def check_input_folder_path(is_double_check=False):
