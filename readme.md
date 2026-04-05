@@ -1,8 +1,6 @@
 # AudioTranscTool
-## 鉴于python的运行速度有些感人，作者也不是计信专业，用C的话容易翻车，临时学习了一下rust，打算用rust重写，正在重构项目
-## 新仓库地址：https://github.com/Linxuanhua1/musicbox
 
-## 警告！！！！这个项目现在还处于测试阶段，请使用前先复制一份源文件，在转换后对比一下看看有没有出问题！！
+## 这个项目现在还处于测试阶段，请使用前先复制一份源文件，在转换后对比一下看看有没有出问题
 ## 如果一直转码失败，可以看看是不是音频被写入了中文的字段名
 ## MORA的音源会被压缩到flac8
 
@@ -11,28 +9,29 @@ mac和linux，部分codec没有发在unix平台下运行的可执行文件，还
 
 ### 特点：
 
-1. 不支持推理cue的编码格式，主流的几个库测试下来对于中文编码和多种语言混合的编码格式正确率不高，所以请自己手动转换cue的编码格式为utf-8，只支持utf-8，对于shift-js、gbk、gb2312之类的都不支持！！！
-2. 转码支持apev2 (ape, tak)、id3v2.3&4 (wav, tta)、mp4 (m4a)的元数据映射到vorbis comment (flac)。
-3. 支持32bit int wav和32bit in m4a转换到flac。（32bit float wav会被跳过）
-4. 支持自动分轨，基于帧的分割，而不是基于时间，更符合CUESHEET的标准（基于文件名检测，当cue的名字和音频的名字相同时就会分割，仅支持flac分割，脚本里会先把所有支持的无损格式音频转换成flac）
-5. 支持使用Catalognumber在musicbrainz搜索对应元数据
-6. 支持转码常见图片格式到jxl，比如webp，png，tiff，jpg，bmp
-7. 支持一些简单的元数据批处理
-8. 未来还会更新别的功能，看我有没有空
+1. 转码支持apev2 (ape, tak)、id3v2.3&4 (wav, tta)、mp4 (m4a)的元数据映射到vorbis comment (flac)。
+2. 支持32bit int wav和32bit in m4a转换到flac。（32bit float wav会被跳过）
+3. 支持自动分轨，基于帧的分割，而不是基于时间，更符合CUESHEET的标准（基于文件名检测，当cue的名字和音频的名字相同时就会分割，仅支持flac分割，脚本里会先把所有支持的无损格式音频转换成flac）
+4. 支持使用Catalognumber在musicbrainz搜索对应元数据
+5. 支持转码常见图片格式到jxl，比如webp，png，tiff，jpg，bmp
+6. 支持一些简单的元数据批处理
+7. 未来还会更新别的功能，看我有没有空
 
 ### 配置：
 
 在config.toml里可以选择开启哪些功能
 
 ```
-activate_cue_splitting = true            # 是否开启分轨功能，默认为true
-activate_image_transc = true             # 是否开启照片转码，默认为true，转换所有支持格式到jxl
-is_delete_single_track = true            # 分轨时是否删除原来的整轨和cue，默认为true
-is_delete_origin_audio = true            # 是否删除转码前的音频，默认为true
-is_delete_origin_img = true              # 是否删除转码前的图片，默认为true
-is_skip_compressed_audio = false         # 是否跳过不可压缩的音频，跳过原理是基于文件夹的标签
-max_workers = 8                          # 多进程转码的个数，建议取cpu核心数，多了容易卡
-separators = ["/", "&", ", ", "; ", " _ ", " / ", "、"]                   # 分隔符自定义
+act_audio_trans = true                   # 是否开启音频转码
+act_cue_splitting = true                 # 是否开启分轨功能，默认为true
+act_img_transc = true                    # 是否开启照片转码，默认为true，转换所有支持格式到jxl
+is_del_single_track = true               # 分轨时是否删除原来的整轨和cue，默认为true
+is_del_src_audio = true                  # 是否删除转码前的音频，默认为true
+is_en_flt_compress = true                # 是否开启浮点音频压缩（常见于一些asmr和e-onkyo音频）
+is_en_dsd_compress = true                # 是否开启dsd压缩
+is_del_src_img = true                    # 是否删除转码前的图片，默认为true
+max_threads = 8                          # 同时转码的个数，建议取cpu核心数，多了容易卡
+separators = ["/", "&", ", ", "; ", " _ ", " / ", "、", " feat. "]                   # 分隔符自定义
 ```
 
 ### 使用教程：
