@@ -1,10 +1,7 @@
 mutagen
-pillow
 musicbrainzngs
-tifffile
 requests
 beautifulsoup4
 tqdm
-concurrent-log-handler
 chardet
 pyvips-binary
