@@ -1,10 +1,10 @@
-import re, os, requests, random, sys
+import os, requests, random, sys
 sys.path.append(os.path.dirname(os.getcwd()))
 from bs4 import BeautifulSoup
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import sleep
-from lib.utils import custom_safe_filename
+from lib.meta.utils import custom_safe_filename
 
 
 def get_base_dir_name(soup):
@@ -39,11 +39,17 @@ def get_pmy_cls(table, pmy_cls):
 
         # 4. 类型：链接尾部 span，例如 (Game)
         type_tag = a_tag.find('span', class_='label')
-        type_text = type_tag.get_text(strip=True).strip("()") if type_tag else 'N/A'
+        if type_tag is None:
+            type_text = 'N/A'
+        else:
+            type_text = type_tag.get_text(strip=True).strip("()")
+            if type_text in ['TV', 'TV Anime']:
+                type_text = 'Anime'
 
         data_dict['name'] = name
         data_dict['url'] = url
         data_dict['date'] = date
+        print(type_text)
         pmy_cls[type_text].append(data_dict)
 
 
@@ -135,13 +141,14 @@ def merge_duplicates(entries):
 
 
 def mk_dir_from_result(base_dir, result, pattern):
+    prefix = os.getcwd()
     for item in result:
         type_tag = custom_safe_filename(item['type'])
         series_tag = custom_safe_filename(item['series'])
         date_tag = custom_safe_filename(item['date'])
         title_tag = custom_safe_filename(item['title'])
         catalogue_number_tag = custom_safe_filename(item['Catalog Number'])
-        os.makedirs(f"{base_dir}/{type_tag}/{series_tag}/{date_tag} {title_tag} [{catalogue_number_tag}]", exist_ok=True)
+        os.makedirs(f"\\\\?\\{prefix}\\{base_dir}\\{type_tag}\\{series_tag}\\[{date_tag}][{title_tag}][{catalogue_number_tag}]", exist_ok=True)
 
 
 def fetch_album_details(i, headers, max_retries=3):

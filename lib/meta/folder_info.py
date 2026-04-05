@@ -1,6 +1,6 @@
 import os, mutagen
 from decimal import Decimal
-from lib.audio_handler import AudioProbe
+from lib.common_utils import probe
 
 PRIORITY_ORDER = ['.dsf', '.flac', '.wav', '.m4a', '.mp3', '.ogg']
 AUDIO_TYPE_QUALITY = {
@@ -59,7 +59,7 @@ def get_best_audio_info(audio_files):
     best_info = ("N/A", "N/A")
 
     best_audio_ext, file_path = audio_files[0]
-    info = AudioProbe.probe(file_path)
+    info = probe(file_path)
     match best_audio_ext:
         case '.flac':
             sample_rate = f"{Decimal(int(info['sample_rate'])) / 1000}kHz"

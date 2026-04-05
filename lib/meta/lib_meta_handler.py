@@ -1,13 +1,12 @@
-import requests, os, sys, tomllib, musicbrainzngs, mutagen
-from bs4 import BeautifulSoup
+import os, sys, tomllib, musicbrainzngs, mutagen
 from enum import Enum
 from typing import List, Tuple, Optional
 from mutagen.id3 import TXXX, Encoding
 
 sys.path.append(os.path.dirname(os.getcwd()))
-from lib.vgm import *
-from lib.utils import check_multi_result, check_input_folder_path, custom_safe_filename, unfold_catno, fold_catno
-from lib.folder_info import analyze_folder_file
+from lib.meta.vgm import *
+from lib.meta.utils import check_multi_result, check_input_folder_path, custom_safe_filename, unfold_catno, fold_catno
+from lib.meta.folder_info import analyze_folder_file
 
 
 musicbrainzngs.set_useragent("MyMusicApp","1.0","your@email.com")
