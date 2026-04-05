@@ -44,8 +44,8 @@ class PathManager:
     def get_output_path(self, desired_path: str | Path) -> Path:
         desired_path = Path(desired_path)
 
-        suffix = "".join(desired_path.suffixes)
-        stem = desired_path.name[:-len(suffix)] if suffix else desired_path.name
+        suffix = desired_path.suffix
+        stem = desired_path.stem
         parent = desired_path.parent
 
         with self._lock:
@@ -82,3 +82,16 @@ class PathManager:
 
         # 本地绝对路径
         return Path("\\\\?\\" + path_str)
+
+    @staticmethod
+    def to_norm_path(path: str | Path) -> Path:
+        path = Path(path).resolve(strict=False)
+        path_str = str(path)
+
+        # 已经是扩展长路径，直接返回
+        if path_str.startswith("\\\\?\\"):
+            return Path(path_str[4:])
+        elif path_str.startswith("\\\\?\\UNC\\"):
+            return Path(path_str[8:])
+        else:
+            return Path(path_str)

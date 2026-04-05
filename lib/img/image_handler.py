@@ -61,8 +61,9 @@ class ImageHandler(ABC):
     def _transfer_metadata(self):
         logger.debug(f"正在将 {self.file_p} 的元数据转移到 {self.out_p}")
         try:
-            cmd = ['exiftool', '-m', '-overwrite_original', '-tagsFromFile', self.file_p, '-all:all', self.out_p]
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            cmd = ['exiftool', '-@', '-']
+            args = '\n'.join(['-m', '-overwrite_original', '-tagsFromFile', str(self.file_p), '-all:all', str(self.out_p)])
+            subprocess.run(cmd, input=args, text=True, check=True, capture_output=True)
         except subprocess.CalledProcessError as e:
             logger.error(e.stderr)
             raise ImageProcessingError(f"将 {self.file_p} 的元数据转移到 {self.out_p} 失败", self.out_p)

@@ -14,7 +14,7 @@ def main():
         if folder_p == "#":
             break
 
-        task_manager = TaskManager(config)
+        task_manager = TaskManager(config, path_manager)
 
         # 定义任务执行顺序
         task_sequence = [

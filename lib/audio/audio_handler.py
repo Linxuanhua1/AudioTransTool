@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from enum import Enum, auto
 from abc import ABC, abstractmethod
 from lib.common_utils import probe
+from lib.path_manager import PathManager
 
 
 os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
@@ -26,11 +27,11 @@ class AudioProcessingError(Exception):
 
 
 class AudioHandler(ABC):
-    def __init__(self, file_p: Path, config):
+    def __init__(self, file_p: Path, path_manager: PathManager, config):
         self.file_p: Path = file_p
-        self.out_p_flac: Path = self.file_p.with_suffix(".flac")
-        self.out_p_wv: Path = self.file_p.with_suffix(".wv")
-        self.is_del_src_audio = config["is_del_src_audio"]
+        self.path_manager: PathManager = path_manager
+        self.out_p: Path | None = None
+        self.is_del_src_audio: bool = config["is_del_src_audio"]
         self.is_en_flt_compress = config["is_en_flt_compress"]
         self.is_en_dsd_compress = config["is_en_dsd_compress"]
 
@@ -60,71 +61,66 @@ class AudioHandler(ABC):
     # ------------------------------------------------------------------ #
     def _reencode_file2flac(self):
         audio_bytes = Path(self.file_p).read_bytes()
-        cmd = ["flac", "-", "--best", "--threads=16", "-o", self.out_p_flac]
+        cmd = ["flac", "-", "--best", "--threads=16", "-o", self.out_p]
         self._run_flac_encode(cmd, audio_bytes)
 
     def _reencode_pcmbytes2flac(self, pcm_bytes: bytes, endian: str, channels: str,
                                  sample_rate: str, bps: str):
         cmd = ['flac', "--force-raw-format", "--sign=signed", f"--endian={endian}",
                f'--channels={channels}', f'--sample-rate={sample_rate}', f'--bps={bps}',
-               '-', '--best', '--threads=16', '-o', self.out_p_flac]
+               '-', '--best', '--threads=16', '-o', self.out_p]
         self._run_flac_encode(cmd, pcm_bytes)
 
     def _reencode_wavbytes2flac(self, wav_bytes: bytes):
-        cmd = ['flac', '-', '--best', '--threads=16', '-o', self.out_p_flac]
+        cmd = ['flac', '-', '--best', '--threads=16', '-o', self.out_p]
         self._run_flac_encode(cmd, wav_bytes)
 
     def _reencode_file2wv(self):
         logger.debug(f"正在将 {self.file_p} 转换为 Wavpack extrahigh extra-encode 6")
-        cmd = ["wavpack", "--threads=12", "-hhx6", self.file_p, self.out_p_wv]
+        cmd = ["wavpack", "--threads=12", "-hhx6", self.file_p, self.out_p]
         try:
             subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8')
         except subprocess.CalledProcessError as e:
             logger.error(e.stdout)
             raise AudioProcessingError(
                 f"未能成功将 {self.file_p} 压缩为 Wavpack extrahigh extra-encode 6",
-                self.out_p_wv
+                self.out_p
             )
         logger.info(f"成功将 {self.file_p} 压缩为 Wavpack extrahigh extra-encode 6")
 
-    def _transfer_metadata(self, out_p: Path):
-        logger.debug(f"正在将 {self.file_p} 的元数据复制到 {out_p}")
+    def _transfer_metadata(self):
+        logger.debug(f"正在将 {self.file_p} 的元数据复制到 {self.out_p}")
         kid3_args = [
-            "kid3-cli", self.file_p.parent,
-            "-c", f"select {self.file_p}",
+            "kid3-cli",
+            "-c", f"select '{self.file_p}'",
             "-c", "set *.selected 1",
-            "-c", "set encodersettings.selected 0",
-            "-c", "set encodedby.selected 0",
+            # "-c", "set encodersettings.selected 0",
+            # "-c", "set encodedby.selected 0",
             "-c", "copy",
-            "-c", f"select {out_p}",
+            "-c", f"select '{self.out_p}'",
             "-c", "paste",
             "-c", "save",
         ]
         try:
-            subprocess.run(kid3_args, check=True, capture_output=True, text=True, encoding='utf-8')
+            # subprocess.run(kid3_args, check=True, capture_output=True, text=True, encoding='utf-8')
+            subprocess.run(kid3_args)
         except subprocess.CalledProcessError as e:
             logger.error(e.stdout)
+            logger.error(e.stdout)
             raise AudioProcessingError(
-                f"未能成功将元数据复制到 {out_p}",
-                out_p
+                f"未能成功将元数据复制到 {self.out_p}",
+                self.out_p
             )
-        logger.info(f"成功将 {self.file_p} 的元数据复制到 {out_p}")
+        logger.info(f"成功将 {self.file_p} 的元数据复制到 {self.out_p}")
 
-    def _finalize_output(self, audio_en_format: AudioEncodeFormat, keep_original_name: bool = False):
-        if audio_en_format is AudioEncodeFormat.FLAC:
-            out_p = self.out_p_flac
-        elif audio_en_format is AudioEncodeFormat.WAVEPACK:
-            out_p = self.out_p_wv
-        else:
-            raise ValueError("不支持的音频编码传入方式")
-
+    def _finalize_output(self, keep_original_name: bool = False):
         # _transfer_metadata 失败会 raise，由上层 _processing_guard 处理
-        self._transfer_metadata(out_p)
+        self._transfer_metadata()
 
         if self.is_del_src_audio:
             self.file_p.unlink()
             if keep_original_name:
-                out_p.rename(self.file_p)
+                self.out_p.rename(self.file_p)
                 logger.debug(f"成功删除 {self.file_p} 并将输出文件更改为原名")
             else:
                 logger.debug(f"成功删除 {self.file_p}")
@@ -138,24 +134,27 @@ class AudioHandler(ABC):
             logger.error(stderr)
             raise AudioProcessingError(
                 f"未能成功将 {self.file_p} 压缩为 flac8",
-                self.out_p_flac
+                self.out_p
             )
         logger.info(f"成功将 {self.file_p} 压缩为 flac8")
 
     @staticmethod
-    def _decode_to_wavbytes(cmd: list) -> bytes:
+    def _decode_to_wavbytes(cmd: list, audio_bytes: bytes = None) -> bytes:
         try:
-            result = subprocess.run(cmd, check=True, capture_output=True)
+            if audio_bytes is None:
+                result = subprocess.run(cmd, check=True, capture_output=True)
+            else:
+                result = subprocess.run(cmd, check=True, capture_output=True, input=audio_bytes)
         except subprocess.CalledProcessError as e:
             raise AudioProcessingError(
                 f"解码失败：{e.stderr.decode(errors='replace')}"
             )
         return result.stdout
 
-    def _flac_similar_compress(self, cmd: list):
-        wav_bytes = self._decode_to_wavbytes(cmd)
+    def _flac_similar_compress(self, cmd: list, audio_bytes: bytes = None):
+        wav_bytes = self._decode_to_wavbytes(cmd, audio_bytes)
         self._reencode_wavbytes2flac(wav_bytes)
-        self._finalize_output(AudioEncodeFormat.FLAC)
+        self._finalize_output()
 
     @staticmethod
     def _pcm_encoding_to_format(stream: dict) -> AudioEncodeFormat:
@@ -179,7 +178,7 @@ class FlacHandler(AudioHandler):
         if stream is None:
             return AudioEncodeFormat.UNSUPPORTED
         sample_rate = int(stream['SampleRate'])
-        channels = int(stream['NumChannels'])
+        channels = int(stream['Channels'])
         bits_per_sample = int(stream['BitsPerSample'])
         duration = float(stream['Duration'])
 
@@ -194,9 +193,13 @@ class FlacHandler(AudioHandler):
         if self._is_enc2flac_or_wv() is not AudioEncodeFormat.FLAC:
             logger.debug(f"{self.file_p} 无需压缩")
             return
-        with self._processing_guard(self.out_p_flac):
+        self.out_p = self.path_manager.get_output_path(self.file_p)
+        with self._processing_guard(self.out_p):
             self._reencode_file2flac()
-            self._finalize_output(AudioEncodeFormat.FLAC, keep_original_name=True)
+            if self.is_del_src_audio:
+                self._finalize_output(keep_original_name=True)
+            else:
+                self._finalize_output()
 
 
 class ApeHandler(AudioHandler):
@@ -204,7 +207,8 @@ class ApeHandler(AudioHandler):
         pass
 
     def compress_audio(self):
-        with self._processing_guard(self.out_p_flac):
+        self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".flac"))
+        with self._processing_guard(self.out_p):
             self._flac_similar_compress(['MAC', self.file_p, '-', '-d'])
 
 
@@ -213,7 +217,8 @@ class TakHandler(AudioHandler):
         pass
 
     def compress_audio(self):
-        with self._processing_guard(self.out_p_flac):
+        self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".flac"))
+        with self._processing_guard(self.out_p):
             self._flac_similar_compress(['Takc', '-d', self.file_p, '-'])
 
 
@@ -222,7 +227,8 @@ class TtaHandler(AudioHandler):
         pass
 
     def compress_audio(self):
-        with self._processing_guard(self.out_p_flac):
+        self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".flac"))
+        with self._processing_guard(self.out_p):
             self._flac_similar_compress(['ttaenc', '-d', self.file_p, '-'])
 
 
@@ -238,8 +244,14 @@ class M4aHandler(AudioHandler):
         if self._is_enc2flac_or_wv() is not AudioEncodeFormat.FLAC:
             logger.debug(f"{self.file_p} 是有损音频，不会转换")
             return
-        with self._processing_guard(self.out_p_flac):
-            self._flac_similar_compress(['refalac', '-D', self.file_p, '-o', '-'])
+        self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".flac"))
+
+        # TODO: 跟进一下这个issue，refalac新版本不支持长路径，旧版本截止到1.83对应qaac2.83是支持长路径的
+        # 不支持unc开头的路径即\\?\
+        # https://github.com/nu774/qaac/issues/121
+        with self._processing_guard(self.out_p):
+            file_p = self.path_manager.to_norm_path(self.file_p)
+            self._flac_similar_compress(['refalac', '-D', file_p, '-o', '-'])
 
 
 class WavepackHandler(AudioHandler):
@@ -255,10 +267,11 @@ class WavepackHandler(AudioHandler):
     def compress_audio(self):
         compress_type = self._is_enc2flac_or_wv()
         if compress_type is AudioEncodeFormat.FLAC:
-            with self._processing_guard(self.out_p_flac):
-                wav_bytes = self._decode_to_wavbytes(['wavpack', '--wav', self.file_p, '-'])
+            self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".flac"))
+            with self._processing_guard(self.out_p):
+                wav_bytes = self._decode_to_wavbytes(['wvunpack', '--wav', self.file_p, '-'])
                 self._reencode_wavbytes2flac(wav_bytes)
-                self._finalize_output(AudioEncodeFormat.FLAC)
+                self._finalize_output()
         elif compress_type is AudioEncodeFormat.WAVEPACK:
             logger.debug(f"{self.file_p} 无需压缩")
         else:
@@ -273,22 +286,25 @@ class WavHandler(AudioHandler):
     def compress_audio(self):
         compress_type = self._is_enc2flac_or_wv()
         if compress_type is AudioEncodeFormat.FLAC:
-            with self._processing_guard(self.out_p_flac):
+            self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".flac"))
+            with self._processing_guard(self.out_p):
                 self._reencode_file2flac()
-                self._finalize_output(AudioEncodeFormat.FLAC)
+                self._finalize_output()
         elif compress_type is AudioEncodeFormat.WAVEPACK and self.is_en_flt_compress:
-            with self._processing_guard(self.out_p_wv):
+            self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".wv"))
+            with self._processing_guard(self.out_p):
                 self._reencode_file2wv()
-                self._finalize_output(AudioEncodeFormat.WAVEPACK)
+                self._finalize_output()
         else:
             logger.error(f"不支持压缩 {self.file_p}")
+            return
 
 
 class AiffHandler(AudioHandler):
     def _is_enc2flac_or_wv(self) -> AudioEncodeFormat:
         stream: dict = probe(self.file_p)
         file_type = stream['FileType']
-        bits_per_sample = int(stream['BitsPerSample'])
+        bits_per_sample = int(stream['SampleSize'])
         if file_type == "AIFF" and bits_per_sample in (16, 24, 32):
             return AudioEncodeFormat.FLAC
         elif file_type == "AIFC" and bits_per_sample in (32, 64):
@@ -298,7 +314,8 @@ class AiffHandler(AudioHandler):
     def compress_audio(self):
         compress_type = self._is_enc2flac_or_wv()
         if compress_type is AudioEncodeFormat.FLAC:
-            with self._processing_guard(self.out_p_flac):
+            self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".flac"))
+            with self._processing_guard(self.out_p):
                 stream: dict = probe(self.file_p)
                 sample_rate, bps, channels = stream['SampleRate'], stream['SampleSize'], stream['NumChannels']
                 pcm_bytes = self.extract_pcm_bytes(self.file_p)
@@ -306,13 +323,15 @@ class AiffHandler(AudioHandler):
                     logger.error(f"{self.file_p}是空文件")
                     return
                 self._reencode_pcmbytes2flac(pcm_bytes, 'big', channels, sample_rate, bps)
-                self._finalize_output(AudioEncodeFormat.FLAC)
+                self._finalize_output()
         elif compress_type is AudioEncodeFormat.WAVEPACK and self.is_en_flt_compress:
-            with self._processing_guard(self.out_p_wv):
+            self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".wv"))
+            with self._processing_guard(self.out_p):
                 self._reencode_file2wv()
-                self._finalize_output(AudioEncodeFormat.WAVEPACK)
+                self._finalize_output()
         else:
             logger.error(f"不支持压缩 {self.file_p}")
+            return
 
     @staticmethod
     def iter_chunks(f, end_pos):
@@ -368,9 +387,10 @@ class DSDHandler(AudioHandler):
 
     def compress_audio(self):
         if self._is_enc2flac_or_wv() is AudioEncodeFormat.WAVEPACK and self.is_en_dsd_compress:
-            with self._processing_guard(self.out_p_wv):
+            self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".wv"))
+            with self._processing_guard(self.out_p):
                 self._reencode_file2wv()
-                self._finalize_output(AudioEncodeFormat.WAVEPACK)
+                self._finalize_output()
         else:
             logger.error(f"不支持压缩 {self.file_p}，可能原因是 dff 是压缩过的，可以尝试用 foobar 手动转换")
 

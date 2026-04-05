@@ -137,7 +137,7 @@ class TaskManager:
         ext = file_p.suffix.lower()
         handler_cls: type[AudioHandler] = AUDIO_HANDLERS.get(ext)
         if handler_cls is not None:
-            return handler_cls(file_p, self.config)
+            return handler_cls(file_p, self.path_manager, self.config)
         return None
 
     def _get_split_handler(self, file_p: Path) -> object | None:
