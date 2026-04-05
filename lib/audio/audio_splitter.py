@@ -1,14 +1,16 @@
-import logging, subprocess, chardet, os
+import subprocess, chardet, os
 from pathlib import Path
 from mutagen.flac import FLAC
 from typing import Any
 from lib.path_manager import PathManager
 from lib.common_utils import probe
+from lib.log import setup_logger
 
 os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
 os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/kid3'
 
-logger = logging.getLogger(__name__)
+
+logger = setup_logger()
 
 
 class Splitter:

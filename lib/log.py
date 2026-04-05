@@ -45,7 +45,7 @@ def setup_logger(logger_name: str = "app") -> logging.Logger:
     )
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
-    file_handler.addFilter(ExcludePlainFilter())   # 关键在这里
+    file_handler.addFilter(ExcludePlainFilter())
     logger.addHandler(file_handler)
 
     return logger

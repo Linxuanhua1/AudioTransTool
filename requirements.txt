@@ -1,7 +1,0 @@
-mutagen
-musicbrainzngs
-requests
-beautifulsoup4
-tqdm
-chardet
-pyvips-binary

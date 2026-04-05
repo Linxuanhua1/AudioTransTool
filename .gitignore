@@ -2,5 +2,6 @@
 /logs
 /bin
 /.venv
-/todo
 /.idea
+uv.lock
+.python-version

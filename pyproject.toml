@@ -1,0 +1,15 @@
+[project]
+name = "audiotranstool"
+version = "0.5.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "musicbrainzngs",
+    "requests",
+    "beautifulsoup4",
+    "tqdm",
+    "chardet",
+    "mutagen",
+    "pyvips[binary]"
+]

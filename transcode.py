@@ -7,8 +7,9 @@ def main():
     with open("config.toml", 'rb') as f:
         config = tomllib.load(f)
     logger = setup_logger()
-    path_manager = PathManager()
+
     while True:
+        path_manager = PathManager()
         logger.info('输入#号退出程序', extra={"plain": True})
         folder_p = path_manager.check_input_folder_path(is_double_check=True)
         if folder_p == "#":

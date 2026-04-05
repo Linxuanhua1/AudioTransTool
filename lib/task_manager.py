@@ -1,4 +1,4 @@
-import concurrent.futures, logging, pyvips
+import concurrent.futures, pyvips
 from pathlib import Path
 from operator import methodcaller
 from typing import Any, Callable
@@ -10,9 +10,10 @@ from lib.audio.audio_handler import TtaHandler, ApeHandler, AiffHandler, AudioHa
 from lib.audio.audio_splitter import Splitter
 from lib.path_manager import PathManager
 from lib.img.image_handler import WebpHandler, JpgHandler, BmpHandler, TiffHandler, PngHandler
+from lib.log import setup_logger
 
 
-logger = logging.getLogger(__name__)
+logger = setup_logger()
 
 
 AUDIO_HANDLERS = {
