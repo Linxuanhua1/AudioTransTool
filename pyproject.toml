@@ -11,5 +11,6 @@ dependencies = [
     "tqdm",
     "chardet",
     "mutagen",
-    "pyvips[binary]"
+    "pyvips[binary]",
+    "pillow>=12.2.0",
 ]

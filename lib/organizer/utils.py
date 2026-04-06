@@ -1,4 +1,30 @@
 import re
+import tomllib
+from typing import List
+
+with open("lib/config.toml", 'rb') as f:
+    config = tomllib.load(f)
+
+SEPARATORS = config['separators']
+
+
+def separate_text(values: List[str]) -> List[str]:
+    """尝试将单一字符串按多个分隔符拆分为多个值。"""
+    if len(values) == 1:
+        pattern = '|'.join(re.escape(sep) for sep in SEPARATORS)
+        return [v.strip() for v in re.split(pattern, values[0]) if v.strip()]
+    return values
+
+
+def map_pattern(prompt_lines: List[str], patterns: dict) -> str:
+    """通用正则选择器。patterns 为 {'1': r'...', '2': r'...'}，最后加一项自定义。"""
+    while True:
+        choice = input('\n'.join(prompt_lines) + '\n请输入数字：')
+        if choice in patterns:
+            return patterns[choice]
+        if choice == str(len(patterns) + 1):
+            return input("请输入正则表达式：")
+        print('输入不正确，请重新输入')
 
 
 def unfold_catno(catno):
@@ -47,5 +73,3 @@ def fold_catno(nums):
         suffix = "0"
 
     return f"{prefix}-{start_str}~{suffix}"
-
-
