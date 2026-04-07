@@ -5,9 +5,9 @@ from mutagen.id3 import (
     TextFrame, UrlFrame, NumericPartTextFrame, PairedTextFrame, TPOS, TRCK,
     USLT, PCST, APIC, COMM, TXXX, WXXX, UFID, ID3)
 
-from lib.meta.image import ImageTag, ImageType
-from lib.meta.consts import ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_TO_ID3, ID3_TUPLE_REVERSE, ID3_FRAME_CLASSES
-from lib.meta.base import MetaReader, MetaWriter, InternalTags, logger
+from lib.tags.image import ImageTag, ImageType
+from lib.tags.consts import ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_TO_ID3, ID3_TUPLE_REVERSE, ID3_FRAME_CLASSES
+from lib.tags.base import MetaReader, MetaWriter, InternalTags, logger
 
 
 class ID3Writer(MetaWriter):

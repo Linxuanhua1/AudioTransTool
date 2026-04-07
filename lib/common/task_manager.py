@@ -8,9 +8,9 @@ from enum import Enum, auto
 from lib.audio.audio_handler import FlacHandler, M4aHandler, DSDHandler, WavHandler, WavepackHandler, TakHandler
 from lib.audio.audio_handler import TtaHandler, ApeHandler, AiffHandler, AudioHandler
 from lib.audio.audio_splitter import Splitter
-from lib.path_manager import PathManager
+from lib.common.path_manager import PathManager
 from lib.img.image_handler import WebpHandler, JpgHandler, BmpHandler, TiffHandler, PngHandler
-from lib.log import setup_logger
+from lib.common.log import setup_logger
 
 
 logger = setup_logger()

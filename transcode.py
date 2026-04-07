@@ -1,7 +1,7 @@
 import tomllib
-from lib.task_manager import TaskManager, TaskType
-from lib.path_manager import PathManager
-from lib.log import setup_logger
+from lib.common.task_manager import TaskManager, TaskType
+from lib.common.path_manager import PathManager
+from lib.common.log import setup_logger
 
 def main():
     with open("config.toml", 'rb') as f:

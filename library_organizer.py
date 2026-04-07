@@ -1,24 +1,83 @@
-from lib.meta.lib_meta_handler import Action
-import os
+from lib.organizer.folder_renamer import FolderRenamer
+from lib.organizer.catno_writer import CatNoWriter
+from lib.organizer.tag_separator import TagSeparator
+from lib.organizer.remote_fetcher import RemoteFetcher
+from lib.organizer.image_extractor import ImageExtractor
+from lib.common.log import setup_logger
 
 
-os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.getcwd() + '/bin/'
+logger = setup_logger(__name__)
 
 
-if __name__ == '__main__':
-    while True:
-        print('-' * 50)
-        print("请选择操作：")
-        for idx, action in enumerate(Action, 1):
-            print(f"{idx}. {action.display_name}")
-        print("0. 退出")
-        try:
-            choice = int(input("输入数字: "))
-            if choice == 0:
-                print("已退出程序。")
-                break
-            print('-' * 50)
-            selected_action = list(Action)[choice - 1]
-            selected_action.func()
-        except (ValueError, IndexError):
-            print("无效的选择")
+class OrganizerCLI:
+    def __init__(self) -> None:
+        self._renamer:   FolderRenamer   | None = None
+        self._writer:    CatNoWriter     | None = None
+        self._separator: TagSeparator    | None = None
+        self._fetcher:   RemoteFetcher   | None = None
+        self._extractor: ImageExtractor  | None = None
+
+    @property
+    def renamer(self) -> FolderRenamer:
+        if self._renamer is None:
+            self._renamer = FolderRenamer()
+        return self._renamer
+
+    @property
+    def writer(self) -> CatNoWriter:
+        if self._writer is None:
+            self._writer = CatNoWriter()
+        return self._writer
+
+    @property
+    def separator(self) -> TagSeparator:
+        if self._separator is None:
+            self._separator = TagSeparator()
+        return self._separator
+
+    @property
+    def fetcher(self) -> RemoteFetcher:
+        if self._fetcher is None:
+            self._fetcher = RemoteFetcher()
+        return self._fetcher
+
+    @property
+    def extractor(self) -> ImageExtractor:
+        if self._extractor is None:
+            self._extractor = ImageExtractor()
+        return self._extractor
+
+    @property
+    def _actions(self) -> list[tuple[str, object]]:
+        return [
+            ("根据音频标签重命名文件夹",                          self.renamer.rename_from_tag),
+            ("提取文件夹名重命名文件夹",                          self.renamer.rename_from_name),
+            ("将音频标签的图片提取到同目录，同时删除音频标签的图片",   self.extractor.extract_and_remove),
+            ("分割音频的艺术家、专辑艺术家和编曲家",                self.separator.separate_tag),
+            ("提取文件夹名中的光盘编号写入音频标签",                self.writer.write_from_folder_name),
+            ("从 VGMdb 拉取数据并创建对应文件夹",                  self.fetcher.fetch_vgm_and_create_folder),
+            ("根据光盘编号从 MusicBrainz 拉取数据",               self.fetcher.fetch_from_musicbrainz),
+        ]
+
+    def run(self) -> None:
+        while True:
+            actions = self._actions
+            logger.info("\n请选择操作：", extra={"plain": True})
+            for i, (name, _) in enumerate(actions, 1):
+                logger.info(f"  {i}. {name}", extra={"plain": True})
+            logger.info("  #. 退出", extra={"plain": True})
+
+            choice = input("请输入数字：").strip()
+            if choice == "#":
+                logger.info("退出", extra={"plain": True})
+                return
+
+            if choice.isdigit() and 1 <= int(choice) <= len(actions):
+                _, handler = actions[int(choice) - 1]
+                handler()
+            else:
+                logger.info("输入不正确，请重新输入", extra={"plain": True})
+
+
+if __name__ == "__main__":
+    OrganizerCLI().run()

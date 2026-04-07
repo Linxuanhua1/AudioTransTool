@@ -8,7 +8,7 @@ from mutagen.id3 import (
     TIPL, TMCL, IPLS, TORY,
 )
 
-from lib.meta.image import ImageType
+from lib.tags.image import ImageType
 
 ID3_NOT_SUPPORTED = ['AENC', 'ASPI', 'COMR', 'ENCR', 'EQU2', "ETCO", "GEOB",
                      'GRID', 'LINK', "MCDI", 'MLLT', "OWNE", "PRIV", 'PCNT',

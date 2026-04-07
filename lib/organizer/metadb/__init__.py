@@ -1,0 +1,1 @@
+from lib.organizer.metadb.vgm.vgm_fetcher import VgmFetcher as Vgm

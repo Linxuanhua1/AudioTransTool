@@ -1,1 +1,0 @@
-from lib.meta.base import MetaTransfer, InternalTags

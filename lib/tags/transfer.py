@@ -1,58 +1,16 @@
-import mutagen
-from abc import ABC, abstractmethod
 from pathlib import Path
-
-from lib.log import setup_logger
-
-logger = setup_logger(__name__)
-
-InternalTags = dict[str, set]
+import mutagen
+from lib.tags.base import MetaReader, MetaWriter, InternalTags
 
 
-class MetaReader(ABC):
-    def __init__(self, file_p: Path):
-        self.file_p = file_p
-        self.audio = mutagen.File(file_p)
-        self._internal: InternalTags | None = None
-
-    @property
-    def internal(self) -> InternalTags:
-        if self._internal is None:
-            self._internal = self.read()
-        return self._internal
-
-    @abstractmethod
-    def read(self) -> InternalTags:
-        pass
-
-    @staticmethod
-    def copy_to(out_p: Path) -> None:
-        pass
-
-    @staticmethod
-    def _merge(target: InternalTags, source: InternalTags) -> None:
-        for key, values in source.items():
-            target.setdefault(key, set()).update(values)
-
-
-class MetaWriter(ABC):
-    @abstractmethod
-    def __init__(self, file_p: Path):
-        pass
-
-    @abstractmethod
-    def write(self, internal: InternalTags) -> None:
-        pass
-
-
-class MetaTransfer:
+class TagsTransfer:
     # tag 格式分组，同组内直通
     @staticmethod
     def transfer_meta(input_p: Path, output_p: Path) -> None:
-        from lib.meta.id3 import ID3Reader, ID3Writer
-        from lib.meta.mp4 import MP4Reader, MP4Writer
-        from lib.meta.apev2 import APEv2Reader, APEv2Writer
-        from lib.meta.vorbis import VorbisReader, VorbisWriter
+        from lib.tags.id3 import ID3Reader, ID3Writer
+        from lib.tags.mp4 import MP4Reader, MP4Writer
+        from lib.tags.apev2 import APEv2Reader, APEv2Writer
+        from lib.tags.vorbis import VorbisReader, VorbisWriter
 
         from mutagen.mp3 import MP3
         from mutagen.trueaudio import TrueAudio
@@ -114,11 +72,11 @@ class MetaTransfer:
             for r, w in TAG_GROUPS
         )
         if same_format:
-            MetaTransfer._copy_tags(reader_cls(input_p), output_p)
+            TagsTransfer._copy_tags(reader_cls(input_p), output_p)
             return
 
-        internal = MetaTransfer._read_from_file(input_p, reader_cls)
-        MetaTransfer._write_to_file(output_p, writer_cls, internal)
+        internal = TagsTransfer._read_from_file(input_p, reader_cls)
+        TagsTransfer._write_to_file(output_p, writer_cls, internal)
 
     @staticmethod
     def _read_from_file(input_p: Path, reader_cls: type[MetaReader]) -> InternalTags:

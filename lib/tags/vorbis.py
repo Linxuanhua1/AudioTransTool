@@ -2,8 +2,8 @@ import mutagen
 from pathlib import Path
 from mutagen.flac import FLAC, Picture
 
-from lib.meta.image import ImageTag, ImageType
-from lib.meta.base import MetaReader, MetaWriter, InternalTags
+from lib.tags.image import ImageTag, ImageType
+from lib.tags.base import MetaReader, MetaWriter, InternalTags
 
 
 class VorbisWriter(MetaWriter):

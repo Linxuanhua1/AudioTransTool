@@ -2,9 +2,9 @@ import mutagen
 from mutagen.apev2 import APEv2
 from pathlib import Path
 
-from lib.meta.image import ImageTag, ImageType
-from lib.meta.consts import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
-from lib.meta.base import MetaReader, MetaWriter, InternalTags
+from lib.tags.image import ImageTag, ImageType
+from lib.tags.consts import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
+from lib.tags.base import MetaReader, MetaWriter, InternalTags
 
 
 class APEv2Writer(MetaWriter):

@@ -1,16 +1,15 @@
 import subprocess, struct, os
-from lib.mediafile import MediaFile
+from lib.tags.transfer import TagsTransfer
 from pathlib import Path
 from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum, auto
 from abc import ABC, abstractmethod
-from lib.common_utils import probe
-from lib.path_manager import PathManager
-from lib.log import setup_logger
+from lib.common.common_utils import probe
+from lib.common.path_manager import PathManager
+from lib.common.log import setup_logger
 
 os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
-os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/kid3'
 
 logger = setup_logger()
 
@@ -91,14 +90,7 @@ class AudioHandler(ABC):
 
     def _transfer_metadata(self):
         logger.debug(f"正在将{self.file_p}的元数据复制到{self.out_p}")
-        src = MediaFile(self.file_p)
-        dst = MediaFile(self.out_p)
-        for field in src.fields():
-            value = getattr(src, field)
-            if value is None:
-                continue
-            setattr(dst, field, value)
-        dst.save()
+        TagsTransfer.transfer_meta(self.file_p, self.out_p)
         logger.debug(f"成功将{self.file_p}的元数据复制到{self.out_p}")
 
     def _finalize_output(self, keep_original_name: bool = False):
