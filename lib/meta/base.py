@@ -9,7 +9,7 @@ logger = setup_logger(__name__)
 InternalTags = dict[str, set]
 
 
-class MetaHandler(ABC):
+class MetaReader(ABC):
     def __init__(self, file_p: Path):
         self.file_p = file_p
         self.audio = mutagen.File(file_p)
@@ -18,74 +18,42 @@ class MetaHandler(ABC):
     @property
     def internal(self) -> InternalTags:
         if self._internal is None:
-            self._internal = self._to_internal()
+            self._internal = self.read()
         return self._internal
 
     @abstractmethod
-    def _to_internal(self) -> InternalTags:
+    def read(self) -> InternalTags:
         pass
 
-    def to_vorbis(self, output_path: Path) -> None:
-        from lib.meta.vorbis import write_vorbis
-        write_vorbis(self.internal, output_path)
-
-    def to_mp4(self, output_path: Path) -> None:
-        from lib.meta.mp4 import write_mp4
-        write_mp4(self.internal, output_path)
-
-    def to_id3(self, output_path: Path) -> None:
-        from lib.meta.id3 import write_id3
-        write_id3(self.internal, output_path)
-
-    def to_apev2(self, output_path: Path) -> None:
-        from lib.meta.apev2 import write_apev2
-        write_apev2(self.internal, output_path)
-
-    def write_to(self, output_path: Path) -> None:
-        """根据目标文件类型自动选择写入方法。"""
-        from mutagen.mp3 import MP3
-        from mutagen.trueaudio import TrueAudio
-        from mutagen.wave import WAVE
-        from mutagen.aiff import AIFF
-        from mutagen.dsf import DSF
-        from mutagen.flac import FLAC
-        from mutagen.ogg import OggFileType
-        from mutagen.aac import AAC
-        from mutagen.monkeysaudio import MonkeysAudio
-        from mutagen.wavpack import WavPack
-        from mutagen.tak import TAK
-
-        audio = mutagen.File(output_path)
-        if audio is None:
-            raise ValueError(f"无法读取目标文件: {output_path}")
-
-        TYPE_TO_WRITER = {
-            MP3:           self.to_id3,
-            TrueAudio:     self.to_id3,
-            WAVE:          self.to_id3,
-            AIFF:          self.to_id3,
-            DSF:           self.to_id3,
-            FLAC:          self.to_vorbis,
-            OggFileType:   self.to_vorbis,
-            AAC:           self.to_mp4,
-            MonkeysAudio:  self.to_apev2,
-            WavPack:       self.to_apev2,
-            TAK:           self.to_apev2,
-        }
-
-        writer = TYPE_TO_WRITER.get(type(audio))
-        if writer is None:
-            raise ValueError(f"不支持的目标文件类型: {type(audio).__name__}")
-
-        writer(output_path)
+    @staticmethod
+    def copy_to(out_p: Path) -> None:
+        pass
 
     @staticmethod
     def _merge(target: InternalTags, source: InternalTags) -> None:
         for key, values in source.items():
             target.setdefault(key, set()).update(values)
 
+
+class MetaWriter(ABC):
+    @abstractmethod
+    def __init__(self, file_p: Path):
+        pass
+
+    @abstractmethod
+    def write(self, internal: InternalTags) -> None:
+        pass
+
+
+class MetaTransfer:
+    # tag 格式分组，同组内直通
     @staticmethod
-    def from_file(file_p: Path) -> MetaHandler:
+    def transfer_meta(input_p: Path, output_p: Path) -> None:
+        from lib.meta.id3 import ID3Reader, ID3Writer
+        from lib.meta.mp4 import MP4Reader, MP4Writer
+        from lib.meta.apev2 import APEv2Reader, APEv2Writer
+        from lib.meta.vorbis import VorbisReader, VorbisWriter
+
         from mutagen.mp3 import MP3
         from mutagen.trueaudio import TrueAudio
         from mutagen.wave import WAVE
@@ -93,36 +61,74 @@ class MetaHandler(ABC):
         from mutagen.dsf import DSF
         from mutagen.flac import FLAC
         from mutagen.ogg import OggFileType
+        from mutagen.oggvorbis import OggVorbis
         from mutagen.aac import AAC
         from mutagen.monkeysaudio import MonkeysAudio
         from mutagen.wavpack import WavPack
         from mutagen.tak import TAK
+        from mutagen.mp4 import MP4
 
-        from lib.meta.id3 import ID3Handler
-        from lib.meta.mp4 import MP4Handler
-        from lib.meta.apev2 import APEv2Handler
-        from lib.meta.vorbis import VorbisHandler
+        ID3_TYPES    = (MP3, TrueAudio, WAVE, AIFF, DSF)
+        VORBIS_TYPES = (FLAC, OggFileType, OggVorbis)
+        MP4_TYPES    = (AAC, MP4)
+        APEV2_TYPES  = (MonkeysAudio, WavPack, TAK)
 
-        audio = mutagen.File(file_p)
-        if audio is None:
-            raise ValueError(f"无法读取文件: {file_p}")
-
-        TYPE_MAP = {
-            MP3:           ID3Handler,
-            TrueAudio:     ID3Handler,
-            WAVE:          ID3Handler,
-            AIFF:          ID3Handler,
-            DSF:           ID3Handler,
-            FLAC:          VorbisHandler,
-            OggFileType:   VorbisHandler,
-            AAC:           MP4Handler,
-            MonkeysAudio:  APEv2Handler,
-            WavPack:       APEv2Handler,
-            TAK:           APEv2Handler,
+        TYPE_TO_READER: dict[type, type[MetaReader]] = {
+            **{t: ID3Reader    for t in ID3_TYPES},
+            **{t: VorbisReader for t in VORBIS_TYPES},
+            **{t: MP4Reader    for t in MP4_TYPES},
+            **{t: APEv2Reader  for t in APEV2_TYPES},
+        }
+        TYPE_TO_WRITER: dict[type, type[MetaWriter]] = {
+            **{t: ID3Writer    for t in ID3_TYPES},
+            **{t: VorbisWriter for t in VORBIS_TYPES},
+            **{t: MP4Writer    for t in MP4_TYPES},
+            **{t: APEv2Writer  for t in APEV2_TYPES},
         }
 
-        handler_cls = TYPE_MAP.get(type(audio))
-        if handler_cls is None:
-            raise ValueError(f"不支持的文件类型: {type(audio).__name__}")
+        # 同 tag 格式分组，用于直通判断
+        TAG_GROUPS: list[tuple[type[MetaReader], type[MetaWriter]]] = [
+            (ID3Reader,    ID3Writer),
+            (VorbisReader, VorbisWriter),
+            (MP4Reader,    MP4Writer),
+            (APEv2Reader,  APEv2Writer),
+        ]
 
-        return handler_cls(file_p)
+        src_audio = mutagen.File(input_p)
+        dst_audio = mutagen.File(output_p)
+        if src_audio is None:
+            raise ValueError(f"无法读取源文件: {input_p}")
+        if dst_audio is None:
+            raise ValueError(f"无法读取目标文件: {output_p}")
+
+        reader_cls = TYPE_TO_READER.get(type(src_audio))
+        writer_cls = TYPE_TO_WRITER.get(type(dst_audio))
+        if reader_cls is None:
+            raise ValueError(f"不支持的源文件类型: {type(src_audio).__name__}")
+        if writer_cls is None:
+            raise ValueError(f"不支持的目标文件类型: {type(dst_audio).__name__}")
+
+        # 同 tag 格式直通
+        same_format = any(
+            reader_cls is r and writer_cls is w
+            for r, w in TAG_GROUPS
+        )
+        if same_format:
+            MetaTransfer._copy_tags(reader_cls(input_p), output_p)
+            return
+
+        internal = MetaTransfer._read_from_file(input_p, reader_cls)
+        MetaTransfer._write_to_file(output_p, writer_cls, internal)
+
+    @staticmethod
+    def _read_from_file(input_p: Path, reader_cls: type[MetaReader]) -> InternalTags:
+        return reader_cls(input_p).internal
+
+    @staticmethod
+    def _write_to_file(output_p: Path, writer_cls: type[MetaWriter], internal: InternalTags) -> None:
+        writer_cls(output_p).write(internal)
+
+    @staticmethod
+    def _copy_tags(reader: MetaReader, output_p: Path) -> None:
+        """同 tag 格式直通复制，不经过 internal 转换。"""
+        reader.copy_to(output_p)

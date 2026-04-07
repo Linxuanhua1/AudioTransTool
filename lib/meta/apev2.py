@@ -4,48 +4,48 @@ from pathlib import Path
 
 from lib.meta.image import ImageTag, ImageType
 from lib.meta.consts import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
-from lib.meta.base import MetaHandler, InternalTags
+from lib.meta.base import MetaReader, MetaWriter, InternalTags
 
 
-def _write_apev2_pic(tags, values: set) -> None:
-    for img in values:
-        if not isinstance(img, ImageTag):
-            continue
-        img_type = img.type if isinstance(img.type, ImageType) else ImageType.Front
-        ape_field = IMAGE_TYPE_TO_APE.get(img_type, "Cover Art (Front)")
-        suffix = (img.mime or "image/jpeg").split("/")[-1]
-        filename = f"cover.{suffix}".encode("utf-8")
-        tags[ape_field] = filename + b"\x00" + img.data
+class APEv2Writer(MetaWriter):
+    def __init__(self, output_path: Path):
+        self.output_path = output_path
+        audio = mutagen.File(output_path)
+        if audio is None:
+            raise ValueError(f"无法打开文件: {output_path}")
+        if audio.tags is None:
+            audio.add_tags()
+        self.audio = audio
+        self.audio.tags.clear()
+
+    def write(self, internal: InternalTags) -> None:
+        for std_key, values in internal.items():
+            if std_key == "PIC":
+                self._write_pic(values)
+            else:
+                self._write_text(std_key, values)
+        self.audio.save(self.output_path)
+
+    def _write_pic(self, values: set) -> None:
+        for img in values:
+            if not isinstance(img, ImageTag):
+                continue
+            img_type = img.type if isinstance(img.type, ImageType) else ImageType.Front
+            ape_field = IMAGE_TYPE_TO_APE.get(img_type, "Cover Art (Front)")
+            suffix = (img.mime or "image/jpeg").split("/")[-1]
+            filename = f"cover.{suffix}".encode("utf-8")
+            self.audio.tags[ape_field] = filename + b"\x00" + img.data
+
+    def _write_text(self, std_key: str, values: set) -> None:
+        str_vals = [v for v in values if isinstance(v, str)]
+        if not str_vals:
+            return
+        ape_key = STANDARD_TO_APEV2.get(std_key, std_key)
+        self.audio.tags[ape_key] = "\x00".join(str_vals)
 
 
-def _write_apev2_text(tags, std_key: str, values: set) -> None:
-    str_vals = [v for v in values if isinstance(v, str)]
-    if not str_vals:
-        return
-    ape_key = STANDARD_TO_APEV2.get(std_key, std_key)
-    tags[ape_key] = "\x00".join(str_vals)
-
-
-def write_apev2(internal: InternalTags, output_path: Path) -> None:
-    audio = mutagen.File(output_path)
-    if audio is None:
-        raise ValueError(f"无法打开文件: {output_path}")
-
-    if audio.tags is None:
-        audio.add_tags()
-    audio.tags.clear()
-
-    for std_key, values in internal.items():
-        if std_key == "PIC":
-            _write_apev2_pic(audio.tags, values)
-        else:
-            _write_apev2_text(audio.tags, std_key, values)
-
-    audio.save(output_path)
-
-
-class APEv2Handler(MetaHandler):
-    def to_apev2(self, output_path: Path) -> None:
+class APEv2Reader(MetaReader):
+    def copy_to(self, output_path: Path) -> None:
         dst = mutagen.File(output_path)
         if dst.tags is None:
             dst.tags = APEv2()
@@ -54,7 +54,7 @@ class APEv2Handler(MetaHandler):
         dst.tags.update(self.audio.tags)
         dst.save(output_path)
 
-    def _to_internal(self) -> InternalTags:
+    def read(self) -> InternalTags:
         tags = self.audio.tags
         if tags is None:
             return {}

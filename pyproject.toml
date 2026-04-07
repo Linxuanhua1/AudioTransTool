@@ -12,5 +12,4 @@ dependencies = [
     "chardet",
     "mutagen",
     "pyvips[binary]",
-    "pillow>=12.2.0",
 ]

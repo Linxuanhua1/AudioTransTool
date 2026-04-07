@@ -6,111 +6,102 @@ from mutagen.mp4 import MP4Cover, MP4Tags, MP4FreeForm
 
 from lib.meta.image import ImageTag, ImageType
 from lib.meta.consts import MP4_TO_STANDARD, STANDARD_TO_MP4, MP4_TUPLE_REVERSE, MP4_INT_FIELDS, MP4_BOOL_FIELDS
-from lib.meta.base import MetaHandler, InternalTags, logger
+from lib.meta.base import MetaReader, MetaWriter, InternalTags, logger
 
 
-def _write_mp4_pic(tags: MP4Tags, values: set) -> None:
-    covers = []
-    for img in values:
-        if not isinstance(img, ImageTag):
-            continue
-        mime = img.mime or ""
-        fmt = MP4Cover.FORMAT_JPEG if mime.endswith(("jpeg", "jpg")) else MP4Cover.FORMAT_PNG
-        covers.append(MP4Cover(img.data, imageformat=fmt))
-    if covers:
-        tags["covr"] = covers
+class MP4Writer(MetaWriter):
+    def __init__(self, output_path: Path):
+        self.output_path = output_path
+        audio = mutagen.File(output_path)
+        if audio is None:
+            raise ValueError(f"无法打开文件: {output_path}")
+        if audio.tags is None:
+            audio.add_tags()
+        self.audio = audio
+        self.tags: MP4Tags = audio.tags
+        self.tags.clear()
+        self.tuple_buf: dict[str, list] = {}
 
+    def write(self, internal: InternalTags) -> None:
+        for std_key, values in internal.items():
+            if std_key == "PIC":
+                self._write_pic(values)
+            elif std_key in MP4_TUPLE_REVERSE:
+                self._write_tuple(std_key, values)
+            else:
+                mp4_key = STANDARD_TO_MP4.get(std_key)
+                if mp4_key is None:
+                    self._write_freeform(std_key, values)
+                elif mp4_key in MP4_BOOL_FIELDS:
+                    self._write_bool(mp4_key, values)
+                elif mp4_key in MP4_INT_FIELDS:
+                    self._write_int(mp4_key, values)
+                else:
+                    self._write_str(mp4_key, values)
 
-def _write_mp4_tuple(tuple_buf: dict, std_key: str, values: set) -> None:
-    mp4_key, idx = MP4_TUPLE_REVERSE[std_key]
-    buf = tuple_buf.setdefault(mp4_key, [0, 0])
-    try:
-        buf[idx] = int(next(iter(values), "0"))
-    except (ValueError, TypeError):
-        pass
+        self._flush_tuples()
+        self.audio.save(self.output_path)
 
+    def _write_pic(self, values: set) -> None:
+        covers = []
+        for img in values:
+            if not isinstance(img, ImageTag):
+                continue
+            mime = img.mime or ""
+            fmt = MP4Cover.FORMAT_JPEG if mime.endswith(("jpeg", "jpg")) else MP4Cover.FORMAT_PNG
+            covers.append(MP4Cover(img.data, imageformat=fmt))
+        if covers:
+            self.tags["covr"] = covers
 
-def _write_mp4_bool(tags: MP4Tags, mp4_key: str, values: set) -> None:
-    try:
-        tags[mp4_key] = bool(int(next(iter(values), "0")))
-    except (ValueError, TypeError):
-        tags[mp4_key] = False
-
-
-def _write_mp4_int(tags: MP4Tags, mp4_key: str, values: set) -> None:
-    int_vals = []
-    for v in values:
+    def _write_tuple(self, std_key: str, values: set) -> None:
+        mp4_key, idx = MP4_TUPLE_REVERSE[std_key]
+        buf = self.tuple_buf.setdefault(mp4_key, [0, 0])
         try:
-            int_vals.append(int(v))
+            buf[idx] = int(next(iter(values), "0"))
         except (ValueError, TypeError):
             pass
-    if int_vals:
-        tags[mp4_key] = int_vals
+
+    def _write_bool(self, mp4_key: str, values: set) -> None:
+        try:
+            self.tags[mp4_key] = bool(int(next(iter(values), "0")))
+        except (ValueError, TypeError):
+            self.tags[mp4_key] = False
+
+    def _write_int(self, mp4_key: str, values: set) -> None:
+        int_vals = []
+        for v in values:
+            try:
+                int_vals.append(int(v))
+            except (ValueError, TypeError):
+                pass
+        if int_vals:
+            self.tags[mp4_key] = int_vals
+
+    def _write_freeform(self, std_key: str, values: set) -> None:
+        freeform_key = f"----:com.apple.iTunes:{std_key}"
+        self.tags[freeform_key] = [
+            MP4FreeForm(v.encode("utf-8") if isinstance(v, str) else v)
+            for v in values
+        ]
+
+    def _write_str(self, mp4_key: str, values: set) -> None:
+        str_vals = [v for v in values if isinstance(v, str)]
+        if str_vals:
+            self.tags[mp4_key] = str_vals
+
+    def _flush_tuples(self) -> None:
+        for mp4_key, (num, total) in self.tuple_buf.items():
+            self.tags[mp4_key] = [(num, total)]
 
 
-def _write_mp4_freeform(tags: MP4Tags, std_key: str, values: set) -> None:
-    freeform_key = f"----:com.apple.iTunes:{std_key}"
-    tags[freeform_key] = [
-        MP4FreeForm(v.encode("utf-8") if isinstance(v, str) else v)
-        for v in values
-    ]
-
-
-def _write_mp4_str(tags: MP4Tags, mp4_key: str, values: set) -> None:
-    str_vals = [v for v in values if isinstance(v, str)]
-    if str_vals:
-        tags[mp4_key] = str_vals
-
-
-def _flush_mp4_tuples(tags: MP4Tags, tuple_buf: dict) -> None:
-    for mp4_key, (num, total) in tuple_buf.items():
-        tags[mp4_key] = [(num, total)]
-
-
-def write_mp4(internal: InternalTags, output_path: Path) -> None:
-    audio = mutagen.File(output_path)
-    if audio is None:
-        raise ValueError(f"无法打开文件: {output_path}")
-
-    if audio.tags is None:
-        audio.add_tags()
-    tags: MP4Tags = audio.tags
-    tags.clear()
-
-    tuple_buf: dict[str, list] = {}
-
-    for std_key, values in internal.items():
-        if std_key == "PIC":
-            _write_mp4_pic(tags, values)
-        elif std_key in MP4_TUPLE_REVERSE:
-            _write_mp4_tuple(tuple_buf, std_key, values)
-        else:
-            mp4_key = STANDARD_TO_MP4.get(std_key)
-            if mp4_key is None:
-                _write_mp4_freeform(tags, std_key, values)
-            elif mp4_key in MP4_BOOL_FIELDS:
-                _write_mp4_bool(tags, mp4_key, values)
-            elif mp4_key in MP4_INT_FIELDS:
-                _write_mp4_int(tags, mp4_key, values)
-            else:
-                _write_mp4_str(tags, mp4_key, values)
-
-    _flush_mp4_tuples(tags, tuple_buf)
-    audio.save(output_path)
-
-
-# ------------------------------------------------------------------ #
-#  MP4Handler                                                          #
-# ------------------------------------------------------------------ #
-
-class MP4Handler(MetaHandler):
-    def to_mp4(self, output_path: Path) -> None:
+class MP4Reader(MetaReader):
+    def copy_to(self, output_path: Path) -> None:
         dst = mutagen.File(output_path)
         dst.tags.clear()
         dst.tags.update(self.audio.tags)
         dst.save(output_path)
 
-    def _to_internal(self) -> InternalTags:
+    def read(self) -> InternalTags:
         tags = self.audio.tags
         if tags is None:
             return {}

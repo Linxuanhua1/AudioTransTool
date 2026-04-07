@@ -1,1 +1,1 @@
-from lib.meta.base import MetaHandler, InternalTags
+from lib.meta.base import MetaTransfer, InternalTags

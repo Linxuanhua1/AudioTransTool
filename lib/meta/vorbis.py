@@ -3,53 +3,50 @@ from pathlib import Path
 from mutagen.flac import FLAC, Picture
 
 from lib.meta.image import ImageTag, ImageType
-from lib.meta.base import MetaHandler, InternalTags
+from lib.meta.base import MetaReader, MetaWriter, InternalTags
 
 
-def _write_vorbis_pic(audio, values: set) -> None:
-    import base64
-    for img in values:
-        if not isinstance(img, ImageTag):
-            continue
-        pic = Picture()
-        pic.data = img.data
-        pic.mime = img.mime or "image/jpeg"
-        pic.desc = img.desc or ""
-        pic.type = img.type.value if isinstance(img.type, ImageType) else (img.type or 0)
-        if isinstance(audio, FLAC):
-            audio.add_picture(pic)
-        else:
-            audio["METADATA_BLOCK_PICTURE"] = [
-                base64.b64encode(pic.write()).decode("ascii")
-            ]
+class VorbisWriter(MetaWriter):
+    def __init__(self, output_path: Path):
+        self.output_path = output_path
+        audio = mutagen.File(output_path)
+        if audio is None:
+            raise ValueError(f"无法打开文件: {output_path}")
+        audio.clear()
+        if hasattr(audio, 'clear_pictures'):
+            audio.clear_pictures()
+        self.audio = audio
+
+    def write(self, internal: InternalTags) -> None:
+        for std_key, values in internal.items():
+            if std_key == "PIC":
+                self._write_pic(values)
+            else:
+                str_values = [v for v in values if isinstance(v, str)]
+                if str_values:
+                    self.audio[std_key.upper()] = str_values
+        self.audio.save(self.output_path)
+
+    def _write_pic(self, values: set) -> None:
+        import base64
+        for img in values:
+            if not isinstance(img, ImageTag):
+                continue
+            pic = Picture()
+            pic.data = img.data
+            pic.mime = img.mime or "image/jpeg"
+            pic.desc = img.desc or ""
+            pic.type = img.type.value if isinstance(img.type, ImageType) else (img.type or 0)
+            if isinstance(self.audio, FLAC):
+                self.audio.add_picture(pic)
+            else:
+                self.audio["METADATA_BLOCK_PICTURE"] = [
+                    base64.b64encode(pic.write()).decode("ascii")
+                ]
 
 
-def write_vorbis(internal: InternalTags, output_path: Path) -> None:
-    audio = mutagen.File(output_path)
-    if audio is None:
-        raise ValueError(f"无法打开文件: {output_path}")
-
-    audio.clear()
-    if hasattr(audio, 'clear_pictures'):
-        audio.clear_pictures()
-
-    for std_key, values in internal.items():
-        if std_key == "PIC":
-            _write_vorbis_pic(audio, values)
-        else:
-            str_values = [v for v in values if isinstance(v, str)]
-            if str_values:
-                audio[std_key.upper()] = str_values
-
-    audio.save(output_path)
-
-
-# ------------------------------------------------------------------ #
-#  VorbisHandler                                                       #
-# ------------------------------------------------------------------ #
-
-class VorbisHandler(MetaHandler):
-    def to_vorbis(self, output_path: Path) -> None:
+class VorbisReader(MetaReader):
+    def copy_to(self, output_path: Path) -> None:
         dst = mutagen.File(output_path)
         dst.clear()
         if hasattr(dst, 'clear_pictures'):
@@ -60,7 +57,7 @@ class VorbisHandler(MetaHandler):
                 dst.add_picture(pic)
         dst.save(output_path)
 
-    def _to_internal(self) -> InternalTags:
+    def read(self) -> InternalTags:
         tags = self.audio.tags
         std_tags: InternalTags = {}
 
