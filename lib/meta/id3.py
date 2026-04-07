@@ -1,45 +1,90 @@
 import mutagen
 from pathlib import Path
 from typing import Callable
-
 from mutagen.id3 import (
-    TextFrame, UrlFrame, NumericPartTextFrame, PairedTextFrame,
-    TALB, TBPM, TCOM, TCON, TCOP, TCMP, TDEN, TDES, TKWD, TCAT,
-    MVNM, MVIN, GRP1, TDOR, TDLY, TDRC, TDRL, TDTG, TENC, TEXT, TFLT,
-    TGID, TIT1, TIT2, TIT3, TKEY, TLAN, TLEN, TMED, TMOO, TOAL, TOFN,
-    TOLY, TOPE, TOWN, TPE1, TPE2, TPE3, TPE4, TPOS, TPRO, TPUB, TRCK,
-    TRSN, TRSO, TSO2, TSOA, TSOC, TSOP, TSOT, TSRC, TSSE, TSST,
-    WCOM, WCOP, WFED, WOAF, WOAR, WOAS, WORS, WPAY, WPUB,
-    TIPL, TMCL, IPLS,
-    SYLT, PCST, APIC,
-    COMM, TXXX, WXXX,
-    UFID,
-    ID3, TORY,
-)
+    TextFrame, UrlFrame, NumericPartTextFrame, PairedTextFrame, TPOS, TRCK,
+    SYLT, PCST, APIC, COMM, TXXX, WXXX, UFID, ID3)
 
-from lib.meta.meta_map import (
-    ID3_TO_STANDARD, ID3_NOT_SUPPORTED, ImageTag, ImageType,
-    STANDARD_TO_ID3, ID3_TUPLE_REVERSE,
-)
+from lib.meta.image import ImageTag, ImageType
+from lib.meta.consts import ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_TO_ID3, ID3_TUPLE_REVERSE, ID3_FRAME_CLASSES
 from lib.meta.base import MetaHandler, InternalTags, logger
 
 
-_ID3_FRAME_CLASSES: dict[str, type] = {
-    'TALB': TALB, 'TBPM': TBPM, 'TCOM': TCOM, 'TCON': TCON, 'TCOP': TCOP,
-    'TCMP': TCMP, 'TDEN': TDEN, 'TDES': TDES, 'TKWD': TKWD, "TORY": TORY,
-    'TCAT': TCAT, 'MVNM': MVNM, 'MVIN': MVIN, 'GRP1': GRP1, 'TDOR': TDOR,
-    'TDLY': TDLY, 'TDRC': TDRC, 'TDRL': TDRL, 'TDTG': TDTG, 'TENC': TENC,
-    'TEXT': TEXT, 'TFLT': TFLT, 'TGID': TGID, 'TIT1': TIT1, 'TIT2': TIT2,
-    'TIT3': TIT3, 'TKEY': TKEY, 'TLAN': TLAN, 'TLEN': TLEN, 'TMED': TMED,
-    'TMOO': TMOO, 'TOAL': TOAL, 'TOFN': TOFN, 'TOLY': TOLY, 'TOPE': TOPE,
-    'TOWN': TOWN, 'TPE1': TPE1, 'TPE2': TPE2, 'TPE3': TPE3, 'TPE4': TPE4,
-    'TPRO': TPRO, 'TPUB': TPUB, 'TRSN': TRSN, 'TRSO': TRSO, 'TSO2': TSO2,
-    'TSOA': TSOA, 'TSOC': TSOC, 'TSOP': TSOP, 'TSOT': TSOT, 'TSRC': TSRC,
-    'TSSE': TSSE, 'TSST': TSST,
-    'WCOM': WCOM, 'WCOP': WCOP, 'WFED': WFED, 'WOAF': WOAF, 'WOAR': WOAR,
-    'WOAS': WOAS, 'WORS': WORS, 'WPAY': WPAY, 'WPUB': WPUB,
-    'TIPL': TIPL, 'TMCL': TMCL, 'IPLS': IPLS,
-}
+def _write_pic(id3: ID3, values: set) -> None:
+    for img in values:
+        if not isinstance(img, ImageTag):
+            continue
+        pic_type = img.type.value if isinstance(img.type, ImageType) else (img.type or 0)
+        id3.add(APIC(
+            encoding=3, mime=img.mime or "image/jpeg",
+            type=pic_type, desc=img.desc or "", data=img.data,
+        ))
+
+
+def _write_comment(id3: ID3, std_key: str, values: set) -> None:
+    desc = std_key[8:] if std_key.startswith("COMMENT:") else ""
+    id3.add(COMM(encoding=3, lang="eng", desc=desc, text=list(values)))
+
+
+def _write_lyrics(id3: ID3, values: set) -> None:
+    for lyric in values:
+        id3.add(SYLT(encoding=3, lang="eng", desc="", text=lyric))
+
+
+def _write_podcast(id3: ID3, values: set) -> None:
+    val = next(iter(values), "0")
+    try:
+        id3.add(PCST(encoding=3, value=int(val)))
+    except (ValueError, TypeError):
+        id3.add(PCST(encoding=3, value=0))
+
+
+def _write_musicbrainz_trackid(id3: ID3, values: set) -> None:
+    for v in values:
+        id3.add(UFID(owner="http://musicbrainz.org", data=v.encode("utf-8")))
+
+
+def _write_wxxx(id3: ID3, std_key: str, values: set) -> None:
+    desc = std_key[4:] if len(std_key) > 4 else ""
+    for v in values:
+        id3.add(WXXX(encoding=3, desc=desc, url=v))
+
+
+def _write_txxx(id3: ID3, std_key: str, values: set) -> None:
+    if std_key.startswith("MUSICBRAINZ_"):
+        parts = std_key[len("MUSICBRAINZ_"):].replace("_", " ").title()
+        desc = f"MusicBrainz {parts}"
+    elif std_key == "ACOUSTID_ID":
+        desc = "Acoustid Id"
+    else:
+        desc = std_key
+    id3.add(TXXX(encoding=3, desc=desc, text=list(values)))
+
+
+def _write_tuple_frame(tuple_buf: dict, std_key: str, values: set) -> None:
+    frame_name = "TRCK" if std_key in ("TRACKNUMBER", "TOTALTRACKS") else "TPOS"
+    idx = 0 if std_key in ("TRACKNUMBER", "DISCNUMBER") else 1
+    buf = tuple_buf.setdefault(frame_name, ["", ""])
+    buf[idx] = str(next(iter(values), ""))
+
+
+def _write_standard_frame(id3: ID3, id3_key: str, values: set) -> None:
+    frame_cls = ID3_FRAME_CLASSES.get(id3_key)
+    if frame_cls is None:
+        logger.warning("id3 key %s 没有对应的帧类，跳过", id3_key)
+        return
+    if issubclass(frame_cls, UrlFrame):
+        for v in values:
+            id3.add(frame_cls(url=v))
+    else:
+        id3.add(frame_cls(encoding=3, text=list(values)))
+
+
+def _flush_tuple_frames(id3: ID3, tuple_buf: dict) -> None:
+    for frame_name, (num, total) in tuple_buf.items():
+        frame_cls = TRCK if frame_name == "TRCK" else TPOS
+        text = f"{num}/{total}" if total else num
+        id3.add(frame_cls(encoding=3, text=[text]))
 
 
 def write_id3(internal: InternalTags, output_path: Path) -> None:
@@ -53,87 +98,30 @@ def write_id3(internal: InternalTags, output_path: Path) -> None:
 
     for std_key, values in internal.items():
         if std_key == "PIC":
-            for img in values:
-                if not isinstance(img, ImageTag):
-                    continue
-                pic_type = img.type.value if isinstance(img.type, ImageType) else (img.type or 0)
-                id3.add(APIC(
-                    encoding=3, mime=img.mime or "image/jpeg",
-                    type=pic_type, desc=img.desc or "", data=img.data,
-                ))
-            continue
-
-        if std_key.startswith("COMMENT"):
-            desc = std_key[8:] if std_key.startswith("COMMENT:") else ""
-            id3.add(COMM(encoding=3, lang="eng", desc=desc, text=list(values)))
-            continue
-
-        if std_key == "LYRICS":
-            for lyric in values:
-                id3.add(SYLT(encoding=3, lang="eng", desc="", text=lyric))
-            continue
-
-        if std_key == "PODCAST":
-            val = next(iter(values), "0")
-            try:
-                id3.add(PCST(encoding=3, value=int(val)))
-            except (ValueError, TypeError):
-                id3.add(PCST(encoding=3, value=0))
-            continue
-
-        if std_key == "MUSICBRAINZ_TRACKID":
-            for v in values:
-                id3.add(UFID(owner="http://musicbrainz.org", data=v.encode("utf-8")))
-            continue
-
-        if std_key.startswith("WXXX"):
-            desc = std_key[4:] if len(std_key) > 4 else ""
-            for v in values:
-                id3.add(WXXX(encoding=3, desc=desc, url=v))
-            continue
-
-        if std_key == "URL":
+            _write_pic(id3, values)
+        elif std_key.startswith("COMMENT"):
+            _write_comment(id3, std_key, values)
+        elif std_key == "LYRICS":
+            _write_lyrics(id3, values)
+        elif std_key == "PODCAST":
+            _write_podcast(id3, values)
+        elif std_key == "MUSICBRAINZ_TRACKID":
+            _write_musicbrainz_trackid(id3, values)
+        elif std_key.startswith("WXXX"):
+            _write_wxxx(id3, std_key, values)
+        elif std_key == "URL":
             for v in values:
                 id3.add(WXXX(encoding=3, desc="", url=v))
-            continue
-
-        id3_key = STANDARD_TO_ID3.get(std_key)
-        if id3_key is None:
-            if std_key.startswith("MUSICBRAINZ_"):
-                parts = std_key[len("MUSICBRAINZ_"):].replace("_", " ").title()
-                desc = f"MusicBrainz {parts}"
-            elif std_key == "ACOUSTID_ID":
-                desc = "Acoustid Id"
+        elif std_key in ID3_TUPLE_REVERSE:
+            _write_tuple_frame(tuple_buf, std_key, values)
+        else:
+            id3_key = STANDARD_TO_ID3.get(std_key)
+            if id3_key is not None:
+                _write_standard_frame(id3, id3_key, values)
             else:
-                desc = std_key
-            id3.add(TXXX(encoding=3, desc=desc, text=list(values)))
-            continue
+                _write_txxx(id3, std_key, values)
 
-        if std_key in ID3_TUPLE_REVERSE:
-            frame_name = "TRCK" if std_key in ("TRACKNUMBER", "TOTALTRACKS") else "TPOS"
-            idx = 0 if std_key in ("TRACKNUMBER", "DISCNUMBER") else 1
-            buf = tuple_buf.setdefault(frame_name, ["", ""])
-            val = next(iter(values), "")
-            buf[idx] = str(val)
-            continue
-
-        frame_cls = _ID3_FRAME_CLASSES.get(id3_key)
-        if frame_cls is not None and issubclass(frame_cls, UrlFrame):
-            for v in values:
-                id3.add(frame_cls(url=v))
-            continue
-
-        if frame_cls is not None:
-            id3.add(frame_cls(encoding=3, text=list(values)))
-            continue
-
-        logger.warning("standard key %s (id3: %s) 没有对应的帧类，跳过", std_key, id3_key)
-
-    for frame_name, (num, total) in tuple_buf.items():
-        frame_cls = TRCK if frame_name == "TRCK" else TPOS
-        text = f"{num}/{total}" if total else num
-        id3.add(frame_cls(encoding=3, text=[text]))
-
+    _flush_tuple_frames(id3, tuple_buf)
     id3.save(output_path)
 
 

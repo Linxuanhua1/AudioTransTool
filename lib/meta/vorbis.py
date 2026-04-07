@@ -2,8 +2,26 @@ import mutagen
 from pathlib import Path
 from mutagen.flac import FLAC, Picture
 
-from lib.meta.meta_map import ImageTag, ImageType
+from lib.meta.image import ImageTag, ImageType
 from lib.meta.base import MetaHandler, InternalTags
+
+
+def _write_vorbis_pic(audio, values: set) -> None:
+    import base64
+    for img in values:
+        if not isinstance(img, ImageTag):
+            continue
+        pic = Picture()
+        pic.data = img.data
+        pic.mime = img.mime or "image/jpeg"
+        pic.desc = img.desc or ""
+        pic.type = img.type.value if isinstance(img.type, ImageType) else (img.type or 0)
+        if isinstance(audio, FLAC):
+            audio.add_picture(pic)
+        else:
+            audio["METADATA_BLOCK_PICTURE"] = [
+                base64.b64encode(pic.write()).decode("ascii")
+            ]
 
 
 def write_vorbis(internal: InternalTags, output_path: Path) -> None:
@@ -17,33 +35,17 @@ def write_vorbis(internal: InternalTags, output_path: Path) -> None:
 
     for std_key, values in internal.items():
         if std_key == "PIC":
-            for img in values:
-                if not isinstance(img, ImageTag):
-                    continue
-                pic = Picture()
-                pic.data = img.data
-                pic.mime = img.mime or "image/jpeg"
-                pic.desc = img.desc or ""
-                pic.type = img.type.value if isinstance(img.type, ImageType) else (img.type or 0)
-                if isinstance(audio, FLAC):
-                    audio.add_picture(pic)
-                else:
-                    import base64
-                    audio["METADATA_BLOCK_PICTURE"] = [
-                        base64.b64encode(pic.write()).decode("ascii")
-                    ]
-            continue
-
-        str_values = [v for v in values if isinstance(v, str)]
-        if not str_values:
-            continue
-        audio[std_key.upper()] = str_values
+            _write_vorbis_pic(audio, values)
+        else:
+            str_values = [v for v in values if isinstance(v, str)]
+            if str_values:
+                audio[std_key.upper()] = str_values
 
     audio.save(output_path)
 
 
 # ------------------------------------------------------------------ #
-#  Reader: Vorbis/FLAC -> internal                                     #
+#  VorbisHandler                                                       #
 # ------------------------------------------------------------------ #
 
 class VorbisHandler(MetaHandler):

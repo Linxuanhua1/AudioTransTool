@@ -1,55 +1,19 @@
-from enum import Enum
-from dataclasses import dataclass
+from mutagen.id3 import (
+    TALB, TBPM, TCOM, TCON, TCOP, TCMP, TDEN, TDES, TKWD, TCAT,
+    MVNM, MVIN, GRP1, TDOR, TDLY, TDRC, TDRL, TDTG, TENC, TEXT, TFLT,
+    TGID, TIT1, TIT2, TIT3, TKEY, TLAN, TLEN, TMED, TMOO, TOAL, TOFN,
+    TOLY, TOPE, TOWN, TPE1, TPE2, TPE3, TPE4, TPRO, TPUB,
+    TRSN, TRSO, TSO2, TSOA, TSOC, TSOP, TSOT, TSRC, TSSE, TSST,
+    WCOM, WCOP, WFED, WOAF, WOAR, WOAS, WORS, WPAY, WPUB,
+    TIPL, TMCL, IPLS, TORY,
+)
 
+from lib.meta.image import ImageType
 
 ID3_NOT_SUPPORTED = ['AENC', 'ASPI', 'COMR', 'ENCR', 'EQU2', "ETCO", "GEOB",
                      'GRID', 'LINK', "MCDI", 'MLLT', "OWNE", "PRIV", 'PCNT',
                      "POPM", 'POSS', 'RBUF', "RVA2", 'RVRB', 'SEEK', 'SIGN',
                      'SYTC', "ATXT", 'CHAP', 'CTOC', 'USER', 'RVAD']
-
-
-class ImageType(Enum):
-    Other = 0
-    Icon = 1
-    OtherIcon = 2
-    Front = 3
-    Back = 4
-    Leaflet = 5
-    Media = 6
-    LeadArtist = 7
-    Artist = 8
-    Conductor = 9
-    Band = 10
-    Composer = 11
-    Lyricist = 12
-    RecordingLocation = 13
-    DuringRecording = 14
-    DuringPerformance = 15
-    ScreenCapture = 16
-    Fish = 17
-    Illustration = 18
-    BandLogo = 19
-    PublisherLogo = 20
-
-
-@dataclass(frozen=True)
-class ImageTag:
-    data: bytes
-    type: ImageType | None
-    desc: str | None
-    mime: str | None
-
-    def __str__(self):
-        return (
-            f"(图片标签: 类型={self.type}, 描述={self.desc}, "
-            f"MIME={self.mime}, 数据长度={len(self.data) if self.data else 0})"
-        )
-
-    def __repr__(self):
-        return (
-            f"(图片标签: 类型={self.type}, 描述={self.desc}, "
-            f"MIME={self.mime}, 数据长度={len(self.data) if self.data else 0})"
-        )
 
 
 # ID3V2.3里TYER是年份，TDAT是几月几日，TRDA才是写完整日期的
@@ -287,6 +251,12 @@ MP4_TUPLE_REVERSE: dict[str, tuple[str, int]] = {
 'TRACKNUMBER': ('trkn', 0)
 }
 
+MP4_BOOL_FIELDS = {'cpil', 'pgap', 'hdvd', 'pcst', 'shwm'}
+MP4_INT_FIELDS = {
+    'tmpo', 'rtng', 'plID', 'atID', 'cnID', 'cmID', 'sfID',
+    'geID', 'stik', 'tves', 'tvsn', 'akID',
+}
+
 STANDARD_TO_ID3: dict[str, str] = {
 'ALBUM': 'TALB',
 'ALBUMARTIST': 'TPE2',
@@ -363,4 +333,45 @@ ID3_TUPLE_REVERSE: dict[str, tuple[str, int]] = {
 'TRACKNUMBER': ('trkn', 0)
 }
 
+ID3_FRAME_CLASSES: dict[str, type] = {
+    'TALB': TALB, 'TBPM': TBPM, 'TCOM': TCOM, 'TCON': TCON, 'TCOP': TCOP,
+    'TCMP': TCMP, 'TDEN': TDEN, 'TDES': TDES, 'TKWD': TKWD, "TORY": TORY,
+    'TCAT': TCAT, 'MVNM': MVNM, 'MVIN': MVIN, 'GRP1': GRP1, 'TDOR': TDOR,
+    'TDLY': TDLY, 'TDRC': TDRC, 'TDRL': TDRL, 'TDTG': TDTG, 'TENC': TENC,
+    'TEXT': TEXT, 'TFLT': TFLT, 'TGID': TGID, 'TIT1': TIT1, 'TIT2': TIT2,
+    'TIT3': TIT3, 'TKEY': TKEY, 'TLAN': TLAN, 'TLEN': TLEN, 'TMED': TMED,
+    'TMOO': TMOO, 'TOAL': TOAL, 'TOFN': TOFN, 'TOLY': TOLY, 'TOPE': TOPE,
+    'TOWN': TOWN, 'TPE1': TPE1, 'TPE2': TPE2, 'TPE3': TPE3, 'TPE4': TPE4,
+    'TPRO': TPRO, 'TPUB': TPUB, 'TRSN': TRSN, 'TRSO': TRSO, 'TSO2': TSO2,
+    'TSOA': TSOA, 'TSOC': TSOC, 'TSOP': TSOP, 'TSOT': TSOT, 'TSRC': TSRC,
+    'TSSE': TSSE, 'TSST': TSST,
+    'WCOM': WCOM, 'WCOP': WCOP, 'WFED': WFED, 'WOAF': WOAF, 'WOAR': WOAR,
+    'WOAS': WOAS, 'WORS': WORS, 'WPAY': WPAY, 'WPUB': WPUB,
+    'TIPL': TIPL, 'TMCL': TMCL, 'IPLS': IPLS,
+}
+
 STANDARD_TO_APEV2: dict[str, str] = {'ALBUMARTIST': 'Album Artist', 'TRACKNUMBER': 'TRACK'}
+
+IMAGE_TYPE_TO_APE: dict[ImageType, str] = {
+ImageType.Leaflet: 'Cover Art (Leaflet)',
+ImageType.DuringRecording: 'Cover Art (During Recording)',
+ImageType.DuringPerformance: 'Cover Art (During Performance)',
+ImageType.ScreenCapture: 'Cover Art (Video Capture)',
+ImageType.Band: 'Cover Art (Band)',
+ImageType.Composer: 'Cover Art (Composer)',
+ImageType.Front: 'Cover Art (Front)',
+ImageType.Back: 'Cover Art (Back)',
+ImageType.Media: 'Cover Art (Media)',
+ImageType.LeadArtist: 'Cover Art (Lead Artist)',
+ImageType.Fish: 'Cover Art (Fish)',
+ImageType.Illustration: 'Cover Art (Illustration)',
+ImageType.RecordingLocation: 'Cover Art (Recording Location)',
+ImageType.Lyricist: 'Cover Art (Lyricist)',
+ImageType.Artist: 'Cover Art (Artist)',
+ImageType.Conductor: 'Cover Art (Conductor)',
+ImageType.BandLogo: 'Cover Art (Band Logotype)',
+ImageType.PublisherLogo: 'Cover Art (Publisher Logotype)',
+ImageType.Other: 'Cover Art (Other)',
+ImageType.Icon: 'Cover Art (Icon)',
+ImageType.OtherIcon: 'Cover Art (Other Icon)'
+}

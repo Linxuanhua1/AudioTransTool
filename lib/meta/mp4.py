@@ -4,20 +4,67 @@ from typing import Callable
 
 from mutagen.mp4 import MP4Cover, MP4Tags, MP4FreeForm
 
-from lib.meta.meta_map import (
-    MP4_TO_STANDARD, ImageTag, ImageType,
-    STANDARD_TO_MP4, MP4_TUPLE_REVERSE,
-)
+from lib.meta.image import ImageTag, ImageType
+from lib.meta.consts import MP4_TO_STANDARD, STANDARD_TO_MP4, MP4_TUPLE_REVERSE, MP4_INT_FIELDS, MP4_BOOL_FIELDS
 from lib.meta.base import MetaHandler, InternalTags, logger
 
-# MP4 bool 字段集合
-_MP4_BOOL_FIELDS = {'cpil', 'pgap', 'hdvd', 'pcst', 'shwm'}
 
-# MP4 int 字段集合（值要存成 int list）
-_MP4_INT_FIELDS = {
-    'tmpo', 'rtng', 'plID', 'atID', 'cnID', 'cmID', 'sfID',
-    'geID', 'stik', 'tves', 'tvsn', 'akID',
-}
+def _write_mp4_pic(tags: MP4Tags, values: set) -> None:
+    covers = []
+    for img in values:
+        if not isinstance(img, ImageTag):
+            continue
+        mime = img.mime or ""
+        fmt = MP4Cover.FORMAT_JPEG if mime.endswith(("jpeg", "jpg")) else MP4Cover.FORMAT_PNG
+        covers.append(MP4Cover(img.data, imageformat=fmt))
+    if covers:
+        tags["covr"] = covers
+
+
+def _write_mp4_tuple(tuple_buf: dict, std_key: str, values: set) -> None:
+    mp4_key, idx = MP4_TUPLE_REVERSE[std_key]
+    buf = tuple_buf.setdefault(mp4_key, [0, 0])
+    try:
+        buf[idx] = int(next(iter(values), "0"))
+    except (ValueError, TypeError):
+        pass
+
+
+def _write_mp4_bool(tags: MP4Tags, mp4_key: str, values: set) -> None:
+    try:
+        tags[mp4_key] = bool(int(next(iter(values), "0")))
+    except (ValueError, TypeError):
+        tags[mp4_key] = False
+
+
+def _write_mp4_int(tags: MP4Tags, mp4_key: str, values: set) -> None:
+    int_vals = []
+    for v in values:
+        try:
+            int_vals.append(int(v))
+        except (ValueError, TypeError):
+            pass
+    if int_vals:
+        tags[mp4_key] = int_vals
+
+
+def _write_mp4_freeform(tags: MP4Tags, std_key: str, values: set) -> None:
+    freeform_key = f"----:com.apple.iTunes:{std_key}"
+    tags[freeform_key] = [
+        MP4FreeForm(v.encode("utf-8") if isinstance(v, str) else v)
+        for v in values
+    ]
+
+
+def _write_mp4_str(tags: MP4Tags, mp4_key: str, values: set) -> None:
+    str_vals = [v for v in values if isinstance(v, str)]
+    if str_vals:
+        tags[mp4_key] = str_vals
+
+
+def _flush_mp4_tuples(tags: MP4Tags, tuple_buf: dict) -> None:
+    for mp4_key, (num, total) in tuple_buf.items():
+        tags[mp4_key] = [(num, total)]
 
 
 def write_mp4(internal: InternalTags, output_path: Path) -> None:
@@ -34,63 +81,27 @@ def write_mp4(internal: InternalTags, output_path: Path) -> None:
 
     for std_key, values in internal.items():
         if std_key == "PIC":
-            covers = []
-            for img in values:
-                if not isinstance(img, ImageTag):
-                    continue
-                fmt = MP4Cover.FORMAT_JPEG if (img.mime or "").endswith("jpeg") or (img.mime or "").endswith("jpg") else MP4Cover.FORMAT_PNG
-                covers.append(MP4Cover(img.data, imageformat=fmt))
-            if covers:
-                tags["covr"] = covers
-            continue
+            _write_mp4_pic(tags, values)
+        elif std_key in MP4_TUPLE_REVERSE:
+            _write_mp4_tuple(tuple_buf, std_key, values)
+        else:
+            mp4_key = STANDARD_TO_MP4.get(std_key)
+            if mp4_key is None:
+                _write_mp4_freeform(tags, std_key, values)
+            elif mp4_key in MP4_BOOL_FIELDS:
+                _write_mp4_bool(tags, mp4_key, values)
+            elif mp4_key in MP4_INT_FIELDS:
+                _write_mp4_int(tags, mp4_key, values)
+            else:
+                _write_mp4_str(tags, mp4_key, values)
 
-        if std_key in MP4_TUPLE_REVERSE:
-            mp4_key, idx = MP4_TUPLE_REVERSE[std_key]
-            buf = tuple_buf.setdefault(mp4_key, [0, 0])
-            val = next(iter(values), "0")
-            try:
-                buf[idx] = int(val)
-            except (ValueError, TypeError):
-                pass
-            continue
-
-        mp4_key = STANDARD_TO_MP4.get(std_key)
-        if mp4_key is None:
-            freeform_key = f"----:com.apple.iTunes:{std_key}"
-            tags[freeform_key] = [
-                MP4FreeForm(v.encode("utf-8") if isinstance(v, str) else v)
-                for v in values
-            ]
-            continue
-
-        if mp4_key in _MP4_BOOL_FIELDS:
-            val = next(iter(values), "0")
-            try:
-                tags[mp4_key] = bool(int(val))
-            except (ValueError, TypeError):
-                tags[mp4_key] = False
-            continue
-
-        if mp4_key in _MP4_INT_FIELDS:
-            int_vals = []
-            for v in values:
-                try:
-                    int_vals.append(int(v))
-                except (ValueError, TypeError):
-                    pass
-            if int_vals:
-                tags[mp4_key] = int_vals
-            continue
-
-        str_vals = [v for v in values if isinstance(v, str)]
-        if str_vals:
-            tags[mp4_key] = str_vals
-
-    for mp4_key, (num, total) in tuple_buf.items():
-        tags[mp4_key] = [(num, total)]
-
+    _flush_mp4_tuples(tags, tuple_buf)
     audio.save(output_path)
 
+
+# ------------------------------------------------------------------ #
+#  MP4Handler                                                          #
+# ------------------------------------------------------------------ #
 
 class MP4Handler(MetaHandler):
     def to_mp4(self, output_path: Path) -> None:

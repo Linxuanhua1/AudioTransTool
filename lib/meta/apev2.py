@@ -2,8 +2,28 @@ import mutagen
 from mutagen.apev2 import APEv2
 from pathlib import Path
 
-from lib.meta.meta_map import APEV2_TO_STANDARD, STANDARD_TO_APEV2, ImageTag, ImageType
+from lib.meta.image import ImageTag, ImageType
+from lib.meta.consts import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
 from lib.meta.base import MetaHandler, InternalTags
+
+
+def _write_apev2_pic(tags, values: set) -> None:
+    for img in values:
+        if not isinstance(img, ImageTag):
+            continue
+        img_type = img.type if isinstance(img.type, ImageType) else ImageType.Front
+        ape_field = IMAGE_TYPE_TO_APE.get(img_type, "Cover Art (Front)")
+        suffix = (img.mime or "image/jpeg").split("/")[-1]
+        filename = f"cover.{suffix}".encode("utf-8")
+        tags[ape_field] = filename + b"\x00" + img.data
+
+
+def _write_apev2_text(tags, std_key: str, values: set) -> None:
+    str_vals = [v for v in values if isinstance(v, str)]
+    if not str_vals:
+        return
+    ape_key = STANDARD_TO_APEV2.get(std_key, std_key)
+    tags[ape_key] = "\x00".join(str_vals)
 
 
 def write_apev2(internal: InternalTags, output_path: Path) -> None:
@@ -15,28 +35,11 @@ def write_apev2(internal: InternalTags, output_path: Path) -> None:
         audio.add_tags()
     audio.tags.clear()
 
-    _image_type_to_ape: dict[ImageType, str] = {
-        v: k for k, v in APEV2_TO_STANDARD.items()
-        if isinstance(v, ImageType)
-    }
-
     for std_key, values in internal.items():
         if std_key == "PIC":
-            for img in values:
-                if not isinstance(img, ImageTag):
-                    continue
-                img_type = img.type if isinstance(img.type, ImageType) else ImageType.Front
-                ape_field = _image_type_to_ape.get(img_type, "Cover Art (Front)")
-                suffix = (img.mime or "image/jpeg").split("/")[-1]
-                filename = f"cover.{suffix}".encode("utf-8")
-                audio.tags[ape_field] = filename + b"\x00" + img.data
-            continue
-
-        ape_key = STANDARD_TO_APEV2.get(std_key, std_key)
-        str_vals = [v for v in values if isinstance(v, str)]
-        if not str_vals:
-            continue
-        audio.tags[ape_key] = "\x00".join(str_vals)
+            _write_apev2_pic(audio.tags, values)
+        else:
+            _write_apev2_text(audio.tags, std_key, values)
 
     audio.save(output_path)
 
