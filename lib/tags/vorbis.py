@@ -62,7 +62,7 @@ class VorbisReader(MetaReader):
         std_tags: InternalTags = {}
 
         for field, tag in tags.items():
-            std_tags.setdefault(field, set()).update(tag)
+            std_tags.setdefault(field.upper(), set()).update(tag)
 
         if self.audio.pictures is not None:
             std_tags.setdefault("PIC", set()).update(self.audio.pictures)

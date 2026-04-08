@@ -375,3 +375,54 @@ ImageType.Other: 'Cover Art (Other)',
 ImageType.Icon: 'Cover Art (Icon)',
 ImageType.OtherIcon: 'Cover Art (Other Icon)'
 }
+
+
+ASF_TO_STANDARD = {
+    # Content Description Object 常见字段
+    "Title": "TITLE",
+    "Author": "ARTIST",
+    "Copyright": "COPYRIGHT",
+    "Description": "COMMENT",
+    "Rating": "RATING",
+
+    # Extended Content Description / Metadata 常见音频字段
+    "WM/AlbumTitle": "ALBUM",
+    "WM/AlbumArtist": "ALBUMARTIST",
+    "WM/Composer": "COMPOSER",
+    "WM/Conductor": "CONDUCTOR",
+    "WM/Writer": "ENCODEDBY",
+    "WM/EncodedBy": "ENCODEDBY",
+    "WM/EncodingSettings": "ENCODERSETTINGS",
+    "WM/Genre": "GENRE",
+    "WM/GenreID": "GENRE",
+    "WM/Year": "DATE",
+    "WM/TrackNumber": "TRACKNUMBER",
+    "WM/Track": "TRACKNUMBER",
+    "WM/PartOfSet": "DISCNUMBER",
+    "WM/BeatsPerMinute": "BPM",
+    "WM/InitialKey": "INITIALKEY",
+    "WM/Language": "LANGUAGE",
+    "WM/Lyrics": "LYRICS",
+    "WM/Mood": "MOOD",
+    "WM/Publisher": "PUBLISHER",
+    "WM/ISRC": "ISRC",
+
+    # 排序/扩展来源相关
+    "WM/OriginalAlbumTitle": "ORIGINALALBUM",
+    "WM/OriginalArtist": "ORIGARTIST",
+    "WM/OriginalFilename": "ORIGINALFILENAME",
+    "WM/OriginalLyricist": "ORIGLYRICIST",
+    "WM/OriginalReleaseTime": "ORIGINALDATE",
+    "WM/OriginalReleaseYear": "ORIGINALDATE",
+
+    # 分组/说明类
+    "WM/ContentGroupDescription": "CONTENTGROUP",
+    "WM/SubTitle": "SUBTITLE",
+
+    # URL 类
+    "WM/AuthorURL": "WWWARTIST",
+    "WM/AudioFileURL": "WWWAUDIOFILE",
+    "WM/AudioSourceURL": "WWWAUDIOSOURCE",
+    "CopyrightURL": "WWWCOPYRIGHT",
+    "WM/PromotionURL": "WWWPUBLISHER",
+}

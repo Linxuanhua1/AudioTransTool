@@ -6,6 +6,29 @@ from lib.organizer.metadb.vgm.consts import VGM_FIELD_MAP, PRODUCT_CATEGORIES, B
 
 
 class VgmParser:
+
+    # ------------------------------------------------------------------ #
+    # 通用工具
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _extract_title(tag: Tag, fallback: str = "") -> str:
+        """从标签中优先取 ja，其次 en，否则取整个标签文本。自动移除 <em>。"""
+        el = (
+            tag.select_one('.albumtitle[lang="ja"]')
+            or tag.select_one('.albumtitle[lang="en"]')
+        )
+        target = el if el else tag
+        em = target.find("em")
+        if em:
+            em.decompose()
+        text = target.get_text(strip=True)
+        return text or fallback
+
+    # ------------------------------------------------------------------ #
+    # 页面类型 & 基础信息
+    # ------------------------------------------------------------------ #
+
     @staticmethod
     def is_franchise(soup: BeautifulSoup) -> bool:
         sub_div = soup.select_one("div#collapse_sub")
@@ -14,53 +37,42 @@ class VgmParser:
         return bool(sub_div.find_all("a", href=re.compile(r"/product/\d+")))
 
     @staticmethod
-    def parse_page_name(soup):
-        page_name = (
-                soup.select_one('h1 .albumtitle[lang="ja"]')
-                or soup.select_one('h1 .albumtitle[lang="en"]')
-        )
-        if not page_name:
-            h1 = soup.select_one("h1")
-            return h1.get_text(strip=True) if h1 else "Unknown"
-
-        em = page_name.find("em")
-        if em:
-            em.decompose()
-
-        return page_name.get_text(strip=True)
+    def parse_page_name(soup: BeautifulSoup) -> str:
+        h1 = soup.select_one("h1")
+        if not h1:
+            return "Unknown"
+        return VgmParser._extract_title(h1, fallback="Unknown")
 
     @staticmethod
-    def parse_page_date(soup: BeautifulSoup) -> str:
-        raw = ""
+    def parse_category(soup: BeautifulSoup) -> str:
+        text = soup.get_text()
+        for cat in PRODUCT_CATEGORIES:
+            if re.search(rf"\b{re.escape(cat)}\b", text):
+                return cat
+        return "Other"
 
-        for b in soup.find_all("b"):
-            text = b.get_text(strip=True)
-            if "Release" in text or "Date" in text:
-                sib = b.next_sibling
-                while sib and not str(sib).strip():
-                    sib = sib.next_sibling
-                if sib:
-                    raw = str(sib).strip().strip(":").strip()
-                    break
-
-        return VgmParser.normalize_date(raw)
+    # ------------------------------------------------------------------ #
+    # 日期处理
+    # ------------------------------------------------------------------ #
 
     @staticmethod
-    def normalize_date(raw: str) -> str:
+    def _normalize_date(raw: str) -> str:
         if not raw:
             return ""
 
         raw = raw.strip()
 
-        # 1. 只有年份，如 2004
+        # 1. 已经是 YYYY.MM.DD 格式
+        m = re.fullmatch(r"(\d{4})\.(\d{2})\.(\d{2})", raw)
+        if m:
+            return raw
+
+        # 2. 只有年份，如 2004
         m = re.fullmatch(r"(\d{4})", raw)
         if m:
-            year = int(m.group(1))
-            return f"{year:04d}.00.00"
+            return f"{int(m.group(1)):04d}.00.00"
 
-        # 2. 英文月份缩写 + 日期 + 年份，后面允许跟额外后缀
-        # 例如 Aug 15, 2004
-        #     Aug 15, 2004C66
+        # 3. 英文月份缩写，如 "Aug 15, 2004" 或 "Aug 15, 2004C66"
         m = re.match(r"([A-Z][a-z]{2})\s+(\d{1,2}),\s*(\d{4})", raw)
         if m:
             mon_str, day, year = m.groups()
@@ -74,19 +86,13 @@ class VgmParser:
     def normalize_url(url: str) -> str:
         return re.sub(r"^http://", "https://", url.strip(), flags=re.IGNORECASE)
 
-    @staticmethod
-    def parse_category(soup: BeautifulSoup) -> str:
-        text = soup.get_text()
-        for cat in PRODUCT_CATEGORIES:
-            if re.search(rf"\b{re.escape(cat)}\b", text):
-                return cat
-        return "Other"
+    # ------------------------------------------------------------------ #
+    # Product 页面解析
+    # ------------------------------------------------------------------ #
 
     @staticmethod
     def parse_album_stubs(soup: BeautifulSoup) -> list[dict]:
-        """
-        从product页面获取专辑列表
-        """
+        """从 product 页面获取专辑列表（轻量 stub）"""
         albums: list[dict] = []
         seen: set[str] = set()
 
@@ -100,7 +106,6 @@ class VgmParser:
             full_url = href if href.startswith("http") else BASE_URL + href
             full_url = VgmParser.normalize_url(full_url)
 
-            # 尝试从同行 <td> 取 catalog number
             catno = ""
             row = a.find_parent("tr")
             if row:
@@ -108,19 +113,12 @@ class VgmParser:
                 if first_td and first_td != a.find_parent("td"):
                     catno = first_td.get_text(strip=True)
 
-            title = (a.select_one('.albumtitle[lang="ja"]')
-                    or a.select_one('.albumtitle[lang="en"]'))
-            if not title:
-                title = a.get_text(strip=True)
-
-            em = title.find("em")
-            if em:
-                em.decompose()
+            title_text = VgmParser._extract_title(a)
 
             albums.append({
                 "url": full_url,
                 "album_id": aid,
-                "title": title.get_text(strip=True),
+                "title": title_text,
                 "catno": catno,
             })
         return albums
@@ -164,6 +162,10 @@ class VgmParser:
             })
         return products
 
+    # ------------------------------------------------------------------ #
+    # Album 详情页解析
+    # ------------------------------------------------------------------ #
+
     @staticmethod
     def parse_album_page(soup: BeautifulSoup, url: str = "") -> AlbumInfo:
         info = AlbumInfo(url=url)
@@ -172,17 +174,27 @@ class VgmParser:
         if m:
             info.album_id = m.group(1)
 
+        # 标题
         title_tag = soup.select_one("#albumtitle") or soup.select_one("h1")
         if title_tag:
-            info.title = title_tag.get_text(separator=" ", strip=True)
+            info.title = VgmParser._extract_title(title_tag)
 
-        # 专辑信息
-        infobit = (soup.select_one("#album_infobit_large")
-                   or soup.select_one(".album_infobit_large"))
+        # 专辑信息表
+        infobit = (
+            soup.select_one("#album_infobit_large")
+            or soup.select_one(".album_infobit_large")
+        )
         if infobit:
             VgmParser._parse_infobit(infobit, info)
 
+        # 日期归一化
+        info.date = VgmParser._normalize_date(info.date)
+
         return info
+
+    # ------------------------------------------------------------------ #
+    # infobit 内部解析
+    # ------------------------------------------------------------------ #
 
     @staticmethod
     def _parse_infobit(container: Tag, info: AlbumInfo) -> None:
@@ -203,8 +215,9 @@ class VgmParser:
                 continue
             for field_name in VGM_FIELD_MAP:
                 if line.startswith(field_name):
-                    VgmParser._set_field(info, field_name,
-                                         line[len(field_name):].strip())
+                    VgmParser._set_field(
+                        info, field_name, line[len(field_name):].strip()
+                    )
                     break
 
     @staticmethod

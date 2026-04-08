@@ -37,7 +37,7 @@ class MetaReader(ABC):
 
 class MetaWriter(ABC):
     @abstractmethod
-    def __init__(self, file_p: Path):
+    def __init__(self, output_p: Path):
         pass
 
     @abstractmethod

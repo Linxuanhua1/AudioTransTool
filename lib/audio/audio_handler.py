@@ -5,7 +5,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum, auto
 from abc import ABC, abstractmethod
-from lib.common.common_utils import probe
+from lib.common.probe import probe
 from lib.common.path_manager import PathManager
 from lib.common.log import setup_logger
 
@@ -237,19 +237,21 @@ class M4aHandler(AudioHandler):
 class WavepackHandler(AudioHandler):
     def _is_enc2flac_or_wv(self) -> AudioEncodeFormat:
         stream: dict = probe(self.file_p)
-        data_format = int(stream['DataFormat'])
-        if data_format == 0:
-            return self._pcm_encoding_to_format(stream)
-        elif data_format == 1:
-            return AudioEncodeFormat.WAVEPACK
-        return AudioEncodeFormat.UNSUPPORTED
+        data_format = stream['source'].split(' ')[1].lower()
+        match data_format:
+            case "dsd" | "floats":
+                return AudioEncodeFormat.WAVEPACK
+            case "ints":
+                return AudioEncodeFormat.FLAC
+            case _:
+                return AudioEncodeFormat.UNSUPPORTED
 
     def compress_audio(self):
         compress_type = self._is_enc2flac_or_wv()
         if compress_type is AudioEncodeFormat.FLAC:
             self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".flac"))
             with self._processing_guard(self.out_p):
-                wav_bytes = self._decode_to_wavbytes(['wvunpack', '--wav', self.file_p, '-'])
+                wav_bytes = self._decode_to_wavbytes(['wvunpack', '--wav', "--threads=12", self.file_p, '-'])
                 self._reencode_wavbytes2flac(wav_bytes)
                 self._finalize_output()
         elif compress_type is AudioEncodeFormat.WAVEPACK:

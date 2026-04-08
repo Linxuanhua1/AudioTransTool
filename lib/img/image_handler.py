@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from lib.common.common_utils import probe
+from lib.common.probe import probe
 from lib.common.log import setup_logger
 
 

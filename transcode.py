@@ -1,5 +1,5 @@
 import tomllib
-from lib.common.task_manager import TaskManager, TaskType
+from lib.task_manager import TaskManager, TaskType
 from lib.common.path_manager import PathManager
 from lib.common.log import setup_logger
 

@@ -12,4 +12,5 @@ dependencies = [
     "chardet",
     "mutagen",
     "pyvips[binary]",
+    "jinja2",
 ]

@@ -6,7 +6,7 @@ from mutagen.id3 import (
     USLT, PCST, APIC, COMM, TXXX, WXXX, UFID, ID3)
 
 from lib.tags.image import ImageTag, ImageType
-from lib.tags.consts import ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_TO_ID3, ID3_TUPLE_REVERSE, ID3_FRAME_CLASSES
+from lib.tags.field_map import ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_TO_ID3, ID3_TUPLE_REVERSE, ID3_FRAME_CLASSES
 from lib.tags.base import MetaReader, MetaWriter, InternalTags, logger
 
 

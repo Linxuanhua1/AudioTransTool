@@ -2,9 +2,9 @@ import mutagen
 from mutagen.apev2 import APEv2
 from pathlib import Path
 
-from lib.tags.image import ImageTag, ImageType
-from lib.tags.consts import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
-from lib.tags.base import MetaReader, MetaWriter, InternalTags
+from .image import ImageTag, ImageType
+from .field_map import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
+from .base import MetaReader, MetaWriter, InternalTags
 
 
 class APEv2Writer(MetaWriter):
@@ -69,7 +69,8 @@ class APEv2Reader(MetaReader):
 
         return std_tags
 
-    def _handle_cover(self, field, tag) -> InternalTags:
+    @staticmethod
+    def _handle_cover(field, tag) -> InternalTags:
         img_type = APEV2_TO_STANDARD[field]
         delimiter = tag.value.find(b"\x00")
         comment = tag.value[:delimiter].decode("utf-8", "replace")
@@ -82,7 +83,8 @@ class APEv2Reader(MetaReader):
         )
         return {"PIC": {pic}}
 
-    def _handle_text(self, field, tag) -> InternalTags:
+    @staticmethod
+    def _handle_text(field, tag) -> InternalTags:
         map_field = APEV2_TO_STANDARD.get(field, field)
         values = set(tag.value.split(b"\x00")) if b"\x00" in tag else set(tag)
         return {map_field: values}

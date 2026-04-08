@@ -5,41 +5,16 @@ from typing import Any, Callable
 from tqdm import tqdm
 from dataclasses import dataclass
 from enum import Enum, auto
-from lib.audio.audio_handler import FlacHandler, M4aHandler, DSDHandler, WavHandler, WavepackHandler, TakHandler
-from lib.audio.audio_handler import TtaHandler, ApeHandler, AiffHandler, AudioHandler
+
+from lib.audio.audio_handler import AudioHandler
+from lib.audio.map import AUDIO_HANDLERS
 from lib.audio.audio_splitter import Splitter
+from lib.img.map import IMAGE_HANDLER
 from lib.common.path_manager import PathManager
-from lib.img.image_handler import WebpHandler, JpgHandler, BmpHandler, TiffHandler, PngHandler
 from lib.common.log import setup_logger
 
 
 logger = setup_logger()
-
-
-AUDIO_HANDLERS = {
-    '.wav': WavHandler,
-    '.m4a': M4aHandler,
-    '.ape': ApeHandler,
-    '.tak': TakHandler,
-    '.tta': TtaHandler,
-    '.flac': FlacHandler,
-    ".wv": WavepackHandler,
-    ".dsf": DSDHandler,
-    ".dff": DSDHandler,
-    ".aiff": AiffHandler,
-    ".aif": AiffHandler,
-    ".aifc": AiffHandler,
-}
-
-IMAGE_HANDLER = {
-    '.jpeg': JpgHandler,
-    '.jpg': JpgHandler,
-    '.png': PngHandler,
-    '.bmp': BmpHandler,
-    '.tif': TiffHandler,
-    '.tiff': TiffHandler,
-    '.webp': WebpHandler
-}
 
 
 class TaskType(Enum):

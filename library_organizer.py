@@ -1,4 +1,6 @@
-from lib.organizer.folder_renamer import FolderRenamer
+import tomllib
+
+from lib.organizer.folder_renamer.folder_renamer import FolderRenamer
 from lib.organizer.catno_writer import CatNoWriter
 from lib.organizer.tag_separator import TagSeparator
 from lib.organizer.remote_fetcher import RemoteFetcher
@@ -9,8 +11,10 @@ from lib.common.log import setup_logger
 logger = setup_logger(__name__)
 
 
-class OrganizerCLI:
+class Organizer:
     def __init__(self) -> None:
+        with open("config.toml", 'rb') as f:
+            self.config = tomllib.load(f)
         self._renamer:   FolderRenamer   | None = None
         self._writer:    CatNoWriter     | None = None
         self._separator: TagSeparator    | None = None
@@ -20,7 +24,7 @@ class OrganizerCLI:
     @property
     def renamer(self) -> FolderRenamer:
         if self._renamer is None:
-            self._renamer = FolderRenamer()
+            self._renamer = FolderRenamer(self.config)
         return self._renamer
 
     @property
@@ -80,4 +84,4 @@ class OrganizerCLI:
 
 
 if __name__ == "__main__":
-    OrganizerCLI().run()
+    Organizer().run()

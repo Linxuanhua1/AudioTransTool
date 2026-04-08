@@ -3,7 +3,7 @@ from pathlib import Path
 from mutagen.flac import FLAC
 from typing import Any
 from lib.common.path_manager import PathManager
-from lib.common.common_utils import probe
+from lib.common.probe import probe
 from lib.common.log import setup_logger
 
 os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
