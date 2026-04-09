@@ -1,21 +1,5 @@
-import tomllib, re
-from typing import Any
+import re
 
-
-with open("config.toml", "rb") as _f:
-    _cfg = tomllib.load(_f)
-
-_vgm_cfg: dict[str, Any] = _cfg.get("vgm", {})
-
-FRANCHISE_MODE: str     = _vgm_cfg.get("franchise_mode", "grouped")
-FETCH_THREADS: int      = _vgm_cfg.get("fetch_threads", 4)
-VGM_COOKIE: str         = _vgm_cfg.get("cookie", "")
-PRODUCT_FOLDER_TPL: str = _vgm_cfg.get("product_folder_template", "[{date}] {product_name}")
-ALBUM_FOLDER_TPL: str   = _vgm_cfg.get("album_folder_template",
-                                        "[{date}][{catno}][{album}][{media_format}]")
-
-if VGM_COOKIE == "":
-    raise Exception("cookie不能为空")
 
 HEADERS: dict[str, str] = {
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -40,7 +24,6 @@ HEADERS: dict[str, str] = {
     'sec-gpc': '1',
     'upgrade-insecure-requests': '1',
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
-    'cookie': VGM_COOKIE,
 }
 
 PRODUCT_CATEGORIES = [

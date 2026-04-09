@@ -4,7 +4,6 @@ import subprocess, json
 
 from .consts import _DSD_RATE_MAP, _COMMENT_SOURCE_MAP
 from .scan_models import FolderStatus
-from lib.organizer import AudioTagReader
 from lib.common import probe
 
 

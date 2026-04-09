@@ -1,16 +1,13 @@
 from pathlib import Path
 from bs4 import BeautifulSoup
-import random, time, threading
+import random, time, threading, requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import requests
 
-from lib.organizer.metadb.vgm.consts import (
-    PRODUCT_FOLDER_TPL, HEADERS, FETCH_THREADS,
-)
-from lib.organizer.metadb.vgm.vgm_data_type import AlbumInfo, SubProduct
-from lib.organizer.metadb.vgm.vgm_parser import VgmParser
+from lib.organizer.remote_fetcher.metadb.vgm.data_type import AlbumInfo, SubProduct
+from lib.organizer.remote_fetcher.metadb.vgm.parser import VgmParser
 from lib.common.path_manager import PathManager
 from lib.common.log import setup_logger
+
 
 logger = setup_logger(__name__)
 
@@ -29,8 +26,8 @@ class VgmHttpClient:
     MAX_RETRIES: int = 4
 
     @classmethod
-    def get(cls, url: str, referer: str | None = None) -> BeautifulSoup:
-        req_headers = HEADERS.copy()
+    def get(cls, url: str, headers, referer: str | None = None) -> BeautifulSoup:
+        req_headers = headers.copy()
         if referer:
             req_headers["referer"] = referer
 
@@ -88,9 +85,9 @@ class VgmHttpClient:
 
 class VgmFileHandler:
     @staticmethod
-    def create_album_folders(parent: Path, albums: list[AlbumInfo]) -> None:
+    def create_album_folders(parent: Path, albums: list[AlbumInfo], template) -> None:
         for album in albums:
-            name = album.folder_name()
+            name = album.folder_name(template)
             if not name:
                 continue
             folder = parent / name
@@ -110,8 +107,9 @@ class VgmFileHandler:
 # ======================================================================= #
 
 class AlbumBatchProcessor:
-    def __init__(self, http_client: VgmHttpClient):
+    def __init__(self, http_client: VgmHttpClient, fetch_threads: int):
         self.http_client = http_client
+        self.fetch_threads = fetch_threads
 
     def fetch_albums(
         self, stubs: list[dict], referer: str | None = None,
@@ -133,7 +131,7 @@ class AlbumBatchProcessor:
                 logger.error(f"获取专辑失败 {stub['url']}: {e}")
                 return None
 
-        with ThreadPoolExecutor(max_workers=FETCH_THREADS) as pool:
+        with ThreadPoolExecutor(max_workers=self.fetch_threads) as pool:
             futures = {pool.submit(_fetch_one, s): s for s in stubs}
             for future in as_completed(futures):
                 info = future.result()
@@ -152,8 +150,9 @@ class AlbumBatchProcessor:
 # ======================================================================= #
 
 class ProductHandler:
-    def __init__(self, album_processor: AlbumBatchProcessor):
+    def __init__(self, album_processor: AlbumBatchProcessor, album_fld_tpl: str):
         self.album_processor = album_processor
+        self.album_fld_tpl = album_fld_tpl
 
     def process(self, soup: BeautifulSoup, url: str) -> None:
         name = VgmParser.parse_page_name(soup)
@@ -163,7 +162,7 @@ class ProductHandler:
         logger.info(f"发现 {len(stubs)} 张专辑，正在获取详情...")
 
         albums = self.album_processor.fetch_albums(stubs, referer=url)
-        VgmFileHandler.create_album_folders(root, albums)
+        VgmFileHandler.create_album_folders(root, albums, self.album_fld_tpl)
 
 
 # ======================================================================= #
@@ -171,15 +170,16 @@ class ProductHandler:
 # ======================================================================= #
 
 class FranchiseFlatHandler:
-    def __init__(self, album_processor: AlbumBatchProcessor):
+    def __init__(self, album_processor: AlbumBatchProcessor, album_fld_tpl):
         self.album_processor = album_processor
+        self.album_fld_tpl = album_fld_tpl
 
     def process(self, soup: BeautifulSoup, root: Path, url: str) -> None:
         stubs = VgmParser.parse_album_stubs(soup)
         logger.info(f"[flat] 发现 {len(stubs)} 张专辑，正在获取详情...")
 
         albums = self.album_processor.fetch_albums(stubs, referer=url)
-        VgmFileHandler.create_album_folders(root, albums)
+        VgmFileHandler.create_album_folders(root, albums, self.album_fld_tpl)
 
 
 # ======================================================================= #
@@ -191,9 +191,13 @@ class FranchiseGroupedHandler:
         self,
         http_client: VgmHttpClient,
         album_processor: AlbumBatchProcessor,
+        product_fld_template: str,
+        album_fld_template: str,
     ):
         self.http_client = http_client
         self.album_processor = album_processor
+        self.product_fld_template = product_fld_template
+        self.album_fld_template = album_fld_template
 
     def process(self, soup: BeautifulSoup, root: Path) -> None:
         franchise_stubs = VgmParser.parse_album_stubs(soup)
@@ -286,12 +290,12 @@ class FranchiseGroupedHandler:
                 continue
 
             cat_dir = root / PathManager.safe_filename(sp.category)
-            prod_name = PRODUCT_FOLDER_TPL.format(
+            prod_name = self.product_fld_template.format(
                 date=sp.date,
                 product_name=PathManager.safe_filename(sp.name),
             )
             prod_dir = cat_dir / PathManager.safe_filename(prod_name)
-            VgmFileHandler.create_album_folders(prod_dir, exclusive_albums)
+            VgmFileHandler.create_album_folders(prod_dir, exclusive_albums, self.album_fld_template)
 
         shared_albums = album_mapping["shared"]
         orphan_stubs = album_mapping["orphan_stubs"]
@@ -301,7 +305,7 @@ class FranchiseGroupedHandler:
             comp_dir.mkdir(parents=True, exist_ok=True)
 
             if shared_albums:
-                VgmFileHandler.create_album_folders(comp_dir, shared_albums)
+                VgmFileHandler.create_album_folders(comp_dir, shared_albums, self.album_fld_template)
             if orphan_stubs:
                 orphan_albums = self.album_processor.fetch_albums(orphan_stubs)
-                VgmFileHandler.create_album_folders(comp_dir, orphan_albums)
+                VgmFileHandler.create_album_folders(comp_dir, orphan_albums, self.album_fld_template)

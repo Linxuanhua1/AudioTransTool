@@ -1,10 +1,11 @@
 import tomllib
 from typing import Callable
+from pathlib import Path
 
+from lib.common.generate_config import generate_config
 from lib.organizer.folder_renamer.folder_renamer import FolderRenamer
-from lib.organizer.catno_writer import CatNoWriter
 from lib.organizer.tag_separator import TagSeparator
-from lib.organizer.remote_fetcher import RemoteFetcher
+from lib.organizer.remote_fetcher.remote_fetcher import RemoteFetcher
 from lib.organizer.image_extractor import ImageExtractor
 from lib.common.log import setup_logger
 
@@ -13,11 +14,9 @@ logger = setup_logger(__name__)
 
 
 class Organizer:
-    def __init__(self) -> None:
-        with open("config.toml", 'rb') as f:
-            self.config = tomllib.load(f)
+    def __init__(self, config) -> None:
+        self.config = config
         self._renamer:   FolderRenamer   | None = None
-        self._writer:    CatNoWriter     | None = None
         self._separator: TagSeparator    | None = None
         self._fetcher:   RemoteFetcher   | None = None
         self._extractor: ImageExtractor  | None = None
@@ -29,21 +28,15 @@ class Organizer:
         return self._renamer
 
     @property
-    def writer(self) -> CatNoWriter:
-        if self._writer is None:
-            self._writer = CatNoWriter()
-        return self._writer
-
-    @property
     def separator(self) -> TagSeparator:
         if self._separator is None:
-            self._separator = TagSeparator()
+            self._separator = TagSeparator(self.config)
         return self._separator
 
     @property
     def fetcher(self) -> RemoteFetcher:
         if self._fetcher is None:
-            self._fetcher = RemoteFetcher()
+            self._fetcher = RemoteFetcher(self.config)
         return self._fetcher
 
     @property
@@ -58,10 +51,9 @@ class Organizer:
             ("根据音频标签重命名文件夹",                          self.renamer.rename_from_tag),
             ("提取文件夹名重命名文件夹",                          self.renamer.rename_from_name),
             ("将音频标签的图片提取到同目录，同时删除音频标签的图片",   self.extractor.extract_and_remove),
-            ("分割音频的艺术家、专辑艺术家和编曲家",                self.separator.separate_tag),
-            ("提取文件夹名中的光盘编号写入音频标签",                self.writer.write_from_folder_name),
+            ("分割音频的自定义字段",                             self.separator.separate_tag),
             ("从 VGMdb 拉取数据并创建对应文件夹",                  self.fetcher.fetch_vgm_and_create_folder),
-            ("根据光盘编号从 MusicBrainz 拉取数据",               self.fetcher.fetch_from_musicbrainz),
+            # ("根据光盘编号从 MusicBrainz 拉取数据",               self.fetcher.fetch_from_musicbrainz),
         ]
 
     def run(self) -> None:
@@ -85,4 +77,10 @@ class Organizer:
 
 
 if __name__ == "__main__":
-    Organizer().run()
+    if not Path("config.toml").exists():
+        generate_config()
+
+    with open("config.toml", 'rb') as f:
+        config = tomllib.load(f)
+
+    Organizer(config).run()

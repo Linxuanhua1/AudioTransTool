@@ -1,64 +1,12 @@
-"""
-ImageExtractor
-==============
-遍历目录下的音频文件，提取内嵌图片保存为 PNG 到同目录，
-然后删除音频中的内嵌图片。
-
-同一专辑目录下相同的图片数据只保存一次。
-"""
-import io, re, mutagen
+import io, mutagen, hashlib
 from pathlib import Path
 from collections import defaultdict
 from PIL import Image
 
-from lib.tags.base import MetaReader
+from lib.organizer.consts import ALLOWED_READ_AUDIO_FORMAT
+from lib.tags.registery_consts import TYPE_TO_READER
 from lib.tags.image import ImageTag
 from lib.common.path_manager import PathManager
-
-
-# --------------------------------------------------------------------------- #
-# Reader 分发
-# --------------------------------------------------------------------------- #
-
-def _get_reader_cls(file_p: Path) -> type[MetaReader] | None:
-    from lib.tags.id3 import ID3Reader
-    from lib.tags.mp4 import MP4Reader
-    from lib.tags.apev2 import APEv2Reader
-    from lib.tags.vorbis import VorbisReader
-
-    from mutagen.mp3 import MP3
-    from mutagen.trueaudio import TrueAudio
-    from mutagen.wave import WAVE
-    from mutagen.aiff import AIFF
-    from mutagen.dsf import DSF
-    from mutagen.flac import FLAC
-    from mutagen.ogg import OggFileType
-    from mutagen.oggvorbis import OggVorbis
-    from mutagen.aac import AAC
-    from mutagen.monkeysaudio import MonkeysAudio
-    from mutagen.wavpack import WavPack
-    from mutagen.tak import TAK
-    from mutagen.mp4 import MP4
-
-    audio = mutagen.File(file_p)
-    if audio is None:
-        return None
-
-    TYPE_MAP: dict[type, type[MetaReader]] = {
-        **{t: ID3Reader for t in (MP3, TrueAudio, WAVE, AIFF, DSF)},
-        **{t: VorbisReader for t in (FLAC, OggFileType, OggVorbis)},
-        **{t: MP4Reader for t in (AAC, MP4)},
-        **{t: APEv2Reader for t in (MonkeysAudio, WavPack, TAK)},
-    }
-    return TYPE_MAP.get(type(audio))
-
-
-_DISC_DIR_RE = re.compile(r"^(?:D|Disc|disc|DISC)\s*\d+$", re.IGNORECASE)
-
-_AUDIO_EXTS = {
-    ".flac", ".ogg", ".mp3", ".wav", ".dsf", ".m4a", ".wma",
-    ".aiff", ".aif", ".tta", ".ape", ".wv", ".tak", ".aac",
-}
 
 
 # --------------------------------------------------------------------------- #
@@ -94,10 +42,9 @@ class ImageExtractor:
         groups: dict[Path, list[Path]] = defaultdict(list)
 
         for f in root.rglob("*"):
-            if not f.is_file() or f.suffix.lower() not in _AUDIO_EXTS:
+            if not f.is_file() or f.suffix.lower() not in ALLOWED_READ_AUDIO_FORMAT:
                 continue
-            album_dir = self._resolve_album_dir(f, root)
-            groups[album_dir].append(f)
+            groups[f.parent].append(f)
 
         if not groups:
             print("未找到音频文件")
@@ -114,23 +61,18 @@ class ImageExtractor:
         print(f"\n处理专辑目录：{album_dir}")
 
         # 收集所有去重后的图片（以 bytes 为 key 去重）
-        unique_images: dict[bytes, ImageTag] = {}
+        unique_images: dict[str, ImageTag] = {}
 
         for f in files:
-            reader_cls = _get_reader_cls(f)
-            if reader_cls is None:
-                continue
-            try:
-                reader = reader_cls(f)
-                internal = reader.internal
-            except Exception as e:
-                print(f"  读取失败 {f.name}：{e}")
-                continue
+            src_audio = mutagen.File(str(f))
+            reader_cls = TYPE_TO_READER.get(type(src_audio))
+            internal= reader_cls(f).internal
 
             pics = internal.get("PIC", set())
             for pic in pics:
                 if isinstance(pic, ImageTag) and pic.data:
-                    unique_images.setdefault(pic.data, pic)
+                    digest = hashlib.sha256(pic.data).hexdigest()
+                    unique_images.setdefault(digest, pic)
 
         if not unique_images:
             print("  没有内嵌图片，跳过")
@@ -159,7 +101,7 @@ class ImageExtractor:
             if i == 0:
                 name = "Cover.png"
             else:
-                name = f"Cover ({i + 1}).png"
+                name = f"Cover({i + 1}).png"
 
             out_path = album_dir / name
             try:
@@ -184,28 +126,21 @@ class ImageExtractor:
                 return False
 
             from mutagen.flac import FLAC
-            from mutagen.ogg import OggFileType
-            from mutagen.mp4 import MP4
+            from mutagen.oggvorbis import OggVorbis
+            from mutagen.mp4 import MP4Tags
             from mutagen.id3 import ID3
             from mutagen.apev2 import APEv2
 
             modified = False
 
             # FLAC / OGG
-            if isinstance(audio, FLAC):
+            if isinstance(audio, (FLAC, OggVorbis)):
                 if audio.pictures:
                     audio.clear_pictures()
                     modified = True
-                if "METADATA_BLOCK_PICTURE" in (audio.tags or {}):
-                    del audio.tags["METADATA_BLOCK_PICTURE"]
-                    modified = True
-            elif isinstance(audio, OggFileType):
-                if audio.tags and "METADATA_BLOCK_PICTURE" in audio.tags:
-                    del audio.tags["METADATA_BLOCK_PICTURE"]
-                    modified = True
-            # MP4
+
             elif hasattr(audio, "tags") and isinstance(audio.tags, type(None)) is False:
-                from mutagen.mp4 import MP4Tags
+                # MP4
                 if isinstance(audio.tags, MP4Tags) and "covr" in audio.tags:
                     del audio.tags["covr"]
                     modified = True
@@ -229,16 +164,3 @@ class ImageExtractor:
         except Exception as e:
             print(f"  删除内嵌图片失败 {file_p.name}：{e}")
             return False
-
-    # ------------------------------------------------------------------ #
-    # 解析专辑目录
-    # ------------------------------------------------------------------ #
-
-    @staticmethod
-    def _resolve_album_dir(audio_file: Path, root: Path) -> Path:
-        parent = audio_file.parent
-        if parent == root:
-            return parent
-        if _DISC_DIR_RE.match(parent.name.strip()) and parent.parent != root:
-            return parent.parent
-        return parent

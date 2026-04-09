@@ -1,4 +1,4 @@
-from audio_handler import *
+from .audio_handler import *
 
 
 AUDIO_HANDLERS = {

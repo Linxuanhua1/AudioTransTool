@@ -1,10 +1,10 @@
 from bs4 import BeautifulSoup
 
 from lib.common.log import setup_logger
-from lib.organizer.metadb.vgm.consts import FRANCHISE_MODE, URL_RE
-from lib.organizer.metadb.vgm.vgm_parser import VgmParser
-from lib.organizer.metadb.vgm.handler import (FranchiseFlatHandler, FranchiseGroupedHandler, VgmFileHandler,
-                                              VgmHttpClient, AlbumBatchProcessor, ProductHandler)
+from .consts import URL_RE, HEADERS
+from .parser import VgmParser
+from .handler import (FranchiseFlatHandler, FranchiseGroupedHandler, VgmFileHandler,
+                      VgmHttpClient, AlbumBatchProcessor, ProductHandler)
 
 
 logger = setup_logger(__name__)
@@ -12,12 +12,23 @@ logger = setup_logger(__name__)
 
 class VgmFetcher:
     """VGM数据获取器 - 主协调器"""
-    def __init__(self):
+    def __init__(self, config):
+        if config["cookie"] == "":
+            raise Exception("cookie不能为空")
+        self.franchise_mode = config["franchise_mode"]
+        self.fetch_threads = config["fetch_threads"]
+        HEADERS['cookie'] = config["cookie"]
+        self.headers = HEADERS
+        self.product_fld_tpl = config["product_fld_tpl"]
+        self.album_fld_tpl = config["album_fld_tpl"]
+
         self.http_client = VgmHttpClient()
-        self.album_processor = AlbumBatchProcessor(self.http_client)
-        self.product_handler = ProductHandler(self.album_processor)
-        self.flat_handler = FranchiseFlatHandler(self.album_processor)
-        self.grouped_handler = FranchiseGroupedHandler(self.http_client, self.album_processor)
+        self.album_processor = AlbumBatchProcessor(self.http_client, self.fetch_threads)
+        self.product_handler = ProductHandler(self.album_processor, self.album_fld_tpl)
+        self.flat_handler = FranchiseFlatHandler(self.album_processor, self.album_fld_tpl)
+        self.grouped_handler = FranchiseGroupedHandler(self.http_client, self.album_processor,
+                                                       self.product_fld_tpl, self.album_fld_tpl)
+
     
     def process(self, url: str) -> None:
         """处理VGM URL，自动识别类型并分发"""
@@ -27,7 +38,7 @@ class VgmFetcher:
             logger.info("仅支持 https://vgmdb.net/product/<id>", extra={"plain": True})
             return
 
-        soup = self.http_client.get(url)
+        soup = self.http_client.get(url, self.headers)
 
         if VgmParser.is_franchise(soup):
             self._handle_franchise(soup, url)
@@ -41,12 +52,12 @@ class VgmFetcher:
         root = VgmFileHandler.create_product_folder(name)
         logger.info(f"创建系列文件夹: {root}")
         
-        if FRANCHISE_MODE == "flat":
+        if self.franchise_mode == "flat":
             self.flat_handler.process(soup, root, url)
-        elif FRANCHISE_MODE == "grouped":
+        elif self.franchise_mode == "grouped":
             self.grouped_handler.process(soup, root)
         else:
-            logger.error(f"不支持的保存模式: {FRANCHISE_MODE}")
+            logger.error(f"不支持的保存模式: {self.franchise_mode}")
     
     def _handle_product(self, soup: BeautifulSoup, url: str) -> None:
         """处理Product页面"""

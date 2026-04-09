@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from lib.common.path_manager import PathManager
-from lib.organizer.metadb.vgm.consts import ALBUM_FOLDER_TPL
+
 
 # --------------------------------------------------------------------------- #
 # 数据结构
@@ -22,8 +22,8 @@ class AlbumInfo:
     performer: str = ""
     price: str = ""
 
-    def folder_name(self) -> str:
-        name = ALBUM_FOLDER_TPL.format(
+    def folder_name(self, template) -> str:
+        name = template.format(
             date=self.date, catno=self.catno, album=self.title,
             media_format=self.media_format, publish_format=self.publish_format,
             classification=self.classification, publisher=self.publisher,

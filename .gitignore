@@ -5,4 +5,4 @@
 /.idea
 uv.lock
 .python-version
-vgmdb-master
+config.toml

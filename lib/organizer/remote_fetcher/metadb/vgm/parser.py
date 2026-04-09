@@ -1,8 +1,8 @@
 import re
 from bs4 import BeautifulSoup, Tag
 
-from lib.organizer.metadb.vgm.vgm_data_type import AlbumInfo
-from lib.organizer.metadb.vgm.consts import VGM_FIELD_MAP, PRODUCT_CATEGORIES, BASE_URL, MONTH_MAP
+from lib.organizer.remote_fetcher.metadb.vgm.data_type import AlbumInfo
+from lib.organizer.remote_fetcher.metadb.vgm.consts import VGM_FIELD_MAP, PRODUCT_CATEGORIES, BASE_URL, MONTH_MAP
 
 
 class VgmParser:

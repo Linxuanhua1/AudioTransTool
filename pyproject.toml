@@ -13,4 +13,5 @@ dependencies = [
     "mutagen",
     "pyvips[binary]",
     "jinja2",
+    "pillow"
 ]

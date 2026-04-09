@@ -3,7 +3,8 @@ from collections import Counter
 
 from jinja2 import Template
 
-from lib.organizer.folder_scanner.consts import ALLOWED_READ_AUDIO_FORMAT, _IMAGE_FORMATS, _AUDIO_FORMAT_ORDER
+from lib.organizer.folder_scanner.consts import _IMAGE_FORMATS, _AUDIO_FORMAT_ORDER
+from lib.organizer.consts import ALLOWED_READ_AUDIO_FORMAT
 from lib.organizer.folder_scanner.scan_models import ScanResult, FolderStatus
 from lib.organizer.folder_scanner.audio_info import AudioSource, AudioQuality
 

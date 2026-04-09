@@ -31,9 +31,10 @@ class AudioHandler(ABC):
         self.file_p: Path = file_p
         self.path_manager: PathManager = path_manager
         self.out_p: Path | None = None
-        self.is_del_src_audio: bool = config["is_del_src_audio"]
-        self.is_en_flt_compress = config["is_en_flt_compress"]
-        self.is_en_dsd_compress = config["is_en_dsd_compress"]
+        self.is_del_src_audio: bool = config['transcode']["is_del_src_audio"]
+        self.is_en_flt_compress: bool = config['transcode']["is_en_flt_compress"]
+        self.is_en_dsd_compress: bool = config['transcode']["is_en_dsd_compress"]
+        self.is_en_flac0_compress: bool = config['transcode']["is_en_flac0_compress"]
 
     @abstractmethod
     def _is_enc2flac_or_wv(self) -> AudioEncodeFormat:
@@ -154,19 +155,21 @@ class AudioHandler(ABC):
 
 class FlacHandler(AudioHandler):
     def _is_enc2flac_or_wv(self) -> AudioEncodeFormat:
-        stream: dict = probe(self.file_p)
-        if stream is None:
-            return AudioEncodeFormat.UNSUPPORTED
-        sample_rate = int(stream['SampleRate'])
-        channels = int(stream['Channels'])
-        bits_per_sample = int(stream['BitsPerSample'])
-        duration = float(stream['Duration'])
+        if self.is_en_flac0_compress:
+            stream: dict = probe(self.file_p)
+            if stream is None:
+                return AudioEncodeFormat.UNSUPPORTED
+            sample_rate = int(stream['SampleRate'])
+            channels = int(stream['Channels'])
+            bits_per_sample = int(stream['BitsPerSample'])
+            duration = float(stream['Duration'])
 
-        pcm_size = sample_rate * channels * bits_per_sample * duration / 8
-        flac_size = self.file_p.stat().st_size
+            pcm_size = sample_rate * channels * bits_per_sample * duration / 8
+            flac_size = self.file_p.stat().st_size
 
-        if flac_size / pcm_size > 0.9:
-            return AudioEncodeFormat.FLAC
+            if flac_size / pcm_size > 0.9:
+                return AudioEncodeFormat.FLAC
+
         return AudioEncodeFormat.UNSUPPORTED
 
     def compress_audio(self):

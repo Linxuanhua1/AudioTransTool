@@ -5,7 +5,7 @@ from jinja2 import Template
 from lib.common.path_manager import PathManager
 from lib.organizer.folder_scanner.folder_scanner import FolderScanner
 from .field_extractor import FieldExtractor
-from .folder_utils import FolderUtils
+from lib.organizer.folder_utils import FolderUtils
 from .pattern_validator import PatternValidator
 
 
@@ -19,6 +19,7 @@ class FolderRenamer:
         self.output_template: Template = Template(self.config['output_template'])
         self.booklet_threshold: int = self.config['booklet_threshold']
         self.folder_content_template: Template = Template(self.config['folder_content_template'])
+        self.disc_f_pattern: str = self.config['disc_f_pattern']
 
     # ------------------------------------------------------------------ #
     # 公开入口
@@ -49,7 +50,7 @@ class FolderRenamer:
     # ------------------------------------------------------------------ #
 
     def _batch_rename_from_name(self, input_root: Path) -> None:
-        album_dirs = FolderUtils.collect_album_dirs(input_root)
+        album_dirs = FolderUtils.collect_album_dirs(input_root, self.disc_f_pattern)
 
         pending: list[tuple[Path, Path]] = []
         for folder_p in album_dirs:
@@ -59,17 +60,17 @@ class FolderRenamer:
             if not any(name_fields.values()):
                 continue
 
-            # 3. 生成新名称
+            # 2. 生成新名称
             new_name = FieldExtractor.format_fields_to_name(name_fields, self.output_template)
             if not new_name:
                 continue
-            # 4. 添加到重命名操作列表
+            # 3. 添加到重命名操作列表
             new_path = folder_p.parent / PathManager.safe_filename(new_name)
             pending.append((folder_p, new_path))
         self._execute(pending)
 
     def _batch_rename_from_tag(self, input_root: Path) -> None:
-        album_dirs = FolderUtils.collect_album_dirs(input_root)
+        album_dirs = FolderUtils.collect_album_dirs(input_root, self.disc_f_pattern)
         pending: list[tuple[Path, Path]] = []
         for folder_p in album_dirs:
             # 1. 从音频标签提取字段

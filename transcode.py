@@ -1,9 +1,14 @@
 import tomllib
+from pathlib import Path
+from lib.common.generate_config import generate_config
 from lib.task_manager import TaskManager, TaskType
 from lib.common.path_manager import PathManager
 from lib.common.log import setup_logger
 
 def main():
+    if not Path("config.toml").exists():
+        generate_config()
+
     with open("config.toml", 'rb') as f:
         config = tomllib.load(f)
     logger = setup_logger()

@@ -3,8 +3,8 @@ from pathlib import Path
 from typing import Optional
 from jinja2 import Template
 
-from .consts import RENAMER_SUPPORTED_EXTRACT_FIELD, FIELD_EXTRACT_FROM_TAGS
-from lib.organizer.folder_scanner.consts import ALLOWED_READ_AUDIO_FORMAT
+from .consts import _RENAMER_SUPPORTED_EXTRACT_FIELD, _FIELD_EXTRACT_FROM_TAGS
+from lib.organizer.consts import ALLOWED_READ_AUDIO_FORMAT
 from lib.tags.registery_consts import TYPE_TO_READER
 
 
@@ -13,7 +13,7 @@ class FieldExtractor:
 
     @staticmethod
     def extract_from_folder_name(folder_name: str, extract_pattern: str, extract_groups) -> dict[str, str]:
-        fields: dict[str, str] = {k: "" for k in RENAMER_SUPPORTED_EXTRACT_FIELD}
+        fields: dict[str, str] = {k: "" for k in _RENAMER_SUPPORTED_EXTRACT_FIELD}
 
         match = re.match(extract_pattern, folder_name)
         if not match:
@@ -38,7 +38,7 @@ class FieldExtractor:
         Returns:
             包含 date 和 album 的字段字典
         """
-        fields: dict[str, str] = {k: "" for k in FIELD_EXTRACT_FROM_TAGS}
+        fields: dict[str, str] = {k: "" for k in _FIELD_EXTRACT_FROM_TAGS}
 
         # 遍历文件夹中的音频文件，读取第一个有效的标签
         for p in folder_path.rglob("*"):

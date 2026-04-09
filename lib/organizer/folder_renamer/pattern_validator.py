@@ -1,6 +1,6 @@
 import re
 
-from lib.organizer.folder_renamer.consts import RENAMER_SUPPORTED_EXTRACT_FIELD
+from lib.organizer.folder_renamer.consts import _RENAMER_SUPPORTED_EXTRACT_FIELD
 
 
 class PatternValidator:
@@ -47,5 +47,5 @@ class PatternValidator:
         """验证模板中的变量是否都在支持的字段列表中。"""
         pattern = r'\{(\w+)\}'
         template_vars = set(re.findall(pattern, config['output_template']))
-        unknown_vars = template_vars - RENAMER_SUPPORTED_EXTRACT_FIELD
+        unknown_vars = template_vars - _RENAMER_SUPPORTED_EXTRACT_FIELD
         return list(unknown_vars)
