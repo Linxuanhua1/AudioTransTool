@@ -2,9 +2,10 @@ import io, mutagen, hashlib
 from pathlib import Path
 from collections import defaultdict
 from PIL import Image
+from typing import Any
 
 from lib.organizer.consts import ALLOWED_READ_AUDIO_FORMAT
-from lib.tags.registery_consts import TYPE_TO_READER
+from lib.tags.registery_consts import TYPE_TO_READER, TYPE_TO_WRITER
 from lib.tags.image import ImageTag
 from lib.common.path_manager import PathManager
 
@@ -62,13 +63,20 @@ class ImageExtractor:
 
         # 收集所有去重后的图片（以 bytes 为 key 去重）
         unique_images: dict[str, ImageTag] = {}
+        pending_del_pic: list[tuple[Path, Any, dict]] = []
 
         for f in files:
             src_audio = mutagen.File(str(f))
-            reader_cls = TYPE_TO_READER.get(type(src_audio))
+            audio_type = type(src_audio)
+            reader_cls = TYPE_TO_READER.get(audio_type)
             internal= reader_cls(f).internal
 
             pics = internal.get("PIC", set())
+            if not pics:
+                continue
+
+            internal["PIC"] = set()
+            pending_del_pic.append((f, audio_type, internal))
             for pic in pics:
                 if isinstance(pic, ImageTag) and pic.data:
                     digest = hashlib.sha256(pic.data).hexdigest()
@@ -85,9 +93,8 @@ class ImageExtractor:
 
         # 删除内嵌图片
         removed = 0
-        for f in files:
-            if self._remove_embedded_pics(f):
-                removed += 1
+        if self._remove_embedded_pics(pending_del_pic):
+            removed += 1
         print(f"  已从 {removed} 个音频文件中移除内嵌图片")
 
     # ------------------------------------------------------------------ #
@@ -118,49 +125,10 @@ class ImageExtractor:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def _remove_embedded_pics(file_p: Path) -> bool:
-        """删除单个音频文件的所有内嵌图片，返回是否有修改。"""
-        try:
-            audio = mutagen.File(file_p)
-            if audio is None:
-                return False
-
-            from mutagen.flac import FLAC
-            from mutagen.oggvorbis import OggVorbis
-            from mutagen.mp4 import MP4Tags
-            from mutagen.id3 import ID3
-            from mutagen.apev2 import APEv2
-
-            modified = False
-
-            # FLAC / OGG
-            if isinstance(audio, (FLAC, OggVorbis)):
-                if audio.pictures:
-                    audio.clear_pictures()
-                    modified = True
-
-            elif hasattr(audio, "tags") and isinstance(audio.tags, type(None)) is False:
-                # MP4
-                if isinstance(audio.tags, MP4Tags) and "covr" in audio.tags:
-                    del audio.tags["covr"]
-                    modified = True
-                # ID3
-                elif hasattr(audio.tags, "getall"):
-                    apics = audio.tags.getall("APIC")
-                    if apics:
-                        audio.tags.delall("APIC")
-                        modified = True
-                # APEv2
-                elif hasattr(audio.tags, "keys"):
-                    cover_keys = [k for k in audio.tags.keys() if k.startswith("Cover Art")]
-                    for k in cover_keys:
-                        del audio.tags[k]
-                        modified = True
-
-            if modified:
-                audio.save()
-            return modified
-
-        except Exception as e:
-            print(f"  删除内嵌图片失败 {file_p.name}：{e}")
-            return False
+    def _remove_embedded_pics(audio_tags: list[tuple[Path, Any, dict]]) -> int:
+        deleted = 0
+        for f, audio_type, internal in audio_tags:
+            writer_cls = TYPE_TO_WRITER.get(audio_type)
+            writer_cls(f).write(internal)
+            deleted += 1
+        return deleted
