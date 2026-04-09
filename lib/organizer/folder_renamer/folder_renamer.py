@@ -64,7 +64,7 @@ class FolderRenamer:
             if not new_name:
                 continue
             # 4. 添加到重命名操作列表
-            new_path = folder_p.parent / new_name
+            new_path = folder_p.parent / PathManager.safe_filename(new_name)
             pending.append((folder_p, new_path))
         self._execute(pending)
 
@@ -107,6 +107,8 @@ class FolderRenamer:
 
         is_ack = input('是否确认重命名？(y/n)：').strip().lower()
         if is_ack != "y":
-            print("撤回重命名")
             for old_p, new_p in renamed:
                 new_p.rename(old_p)
+            print("已撤回重命名")
+        else:
+            print("完成重命名")

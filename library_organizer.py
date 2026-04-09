@@ -1,4 +1,5 @@
 import tomllib
+from typing import Callable
 
 from lib.organizer.folder_renamer.folder_renamer import FolderRenamer
 from lib.organizer.catno_writer import CatNoWriter
@@ -52,7 +53,7 @@ class Organizer:
         return self._extractor
 
     @property
-    def _actions(self) -> list[tuple[str, object]]:
+    def _actions(self) -> list[tuple[str, Callable]]:
         return [
             ("根据音频标签重命名文件夹",                          self.renamer.rename_from_tag),
             ("提取文件夹名重命名文件夹",                          self.renamer.rename_from_name),
