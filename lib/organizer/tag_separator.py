@@ -2,9 +2,8 @@ from pathlib import Path
 from typing import Any
 import mutagen, re
 
-from .consts import ALLOWED_READ_AUDIO_FORMAT
-from lib.tags.registery_consts import TYPE_TO_READER, TYPE_TO_WRITER
-from lib.common.path_manager import PathManager
+from lib.constants import ALLOWED_READ_AUDIO_FORMAT, TYPE_TO_READER, TYPE_TO_WRITER
+from lib.common import PathManager
 
 
 class TagSeparator:

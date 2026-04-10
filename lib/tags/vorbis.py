@@ -2,8 +2,7 @@ import mutagen
 from pathlib import Path
 from mutagen.flac import FLAC, Picture
 
-from lib.tags.image import ImageTag, ImageType
-from lib.tags.base import MetaReader, MetaWriter, InternalTags
+from . import InternalImageTag, ImageType, MetaReader, MetaWriter, InternalTags
 
 
 class VorbisWriter(MetaWriter):
@@ -30,7 +29,7 @@ class VorbisWriter(MetaWriter):
     def _write_pic(self, values: set) -> None:
         import base64
         for img in values:
-            if not isinstance(img, ImageTag):
+            if not isinstance(img, InternalImageTag):
                 continue
             pic = Picture()
             pic.data = img.data

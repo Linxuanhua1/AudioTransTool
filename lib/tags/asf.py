@@ -1,9 +1,8 @@
 from pathlib import Path
 import struct
 
-from .base import MetaWriter, MetaReader, InternalTags
-from .field_map import ASF_TO_STANDARD
-from .image import ImageTag, ImageType
+from lib.constants import ASF_TO_STANDARD
+from . import InternalImageTag, ImageType, MetaWriter, MetaReader, InternalTags
 
 
 # TODO: AsfWriter
@@ -59,7 +58,7 @@ class AsfReader(MetaReader):
             except ValueError:
                 pic_type = None
 
-            pic = ImageTag(data=image_data, type=pic_type, desc=desc or None, mime=mime or None)
+            pic = InternalImageTag(data=image_data, type=pic_type, desc=desc or None, mime=mime or None)
             result.setdefault("PIC", set()).add(pic)
         return result
 

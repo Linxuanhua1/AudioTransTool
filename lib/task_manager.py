@@ -7,9 +7,8 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 from lib.audio.audio_handler import AudioHandler
-from lib.audio.map import AUDIO_HANDLERS
+from lib.constants import AUDIO_HANDLERS, IMAGE_HANDLERS
 from lib.audio.audio_splitter import Splitter
-from lib.img.map import IMAGE_HANDLER
 from lib.common.path_manager import PathManager
 from lib.common.log import setup_logger
 
@@ -127,7 +126,7 @@ class TaskManager:
     def _get_image_handler(self, file_p: Path) -> tuple | None:
         ext = file_p.suffix.lower()
         stem = file_p.stem
-        handler = IMAGE_HANDLER.get(ext.lower())
+        handler = IMAGE_HANDLERS.get(ext.lower())
 
         # 跳过已经是目标格式的封面
         if stem + ext == 'Cover.png':

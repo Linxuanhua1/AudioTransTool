@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from lib.organizer.folder_scanner.consts import ALLOWED_READ_AUDIO_FORMAT
+from lib.constants import ALLOWED_READ_AUDIO_FORMAT
 
 
 class FolderUtils:

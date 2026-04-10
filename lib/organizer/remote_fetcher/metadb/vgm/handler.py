@@ -3,10 +3,8 @@ from bs4 import BeautifulSoup
 import random, time, threading, requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from lib.organizer.remote_fetcher.metadb.vgm.data_type import AlbumInfo, SubProduct
-from lib.organizer.remote_fetcher.metadb.vgm.parser import VgmParser
-from lib.common.path_manager import PathManager
-from lib.common.log import setup_logger
+from . import AlbumInfo, SubProduct, VgmParser
+from lib.common import PathManager, setup_logger
 
 
 logger = setup_logger(__name__)

@@ -27,7 +27,7 @@ class ImageType(Enum):
 
 
 @dataclass(frozen=True)
-class ImageTag:
+class InternalImageTag:
     data: bytes
     type: ImageType | None
     desc: str | None

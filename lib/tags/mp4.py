@@ -4,9 +4,8 @@ from typing import Callable
 
 from mutagen.mp4 import MP4Cover, MP4Tags, MP4FreeForm
 
-from lib.tags.image import ImageTag, ImageType
-from lib.tags.field_map import MP4_TO_STANDARD, STANDARD_TO_MP4, MP4_TUPLE_REVERSE, MP4_INT_FIELDS, MP4_BOOL_FIELDS
-from lib.tags.base import MetaReader, MetaWriter, InternalTags, logger
+from . import InternalImageTag, ImageType, MetaReader, MetaWriter, InternalTags, logger
+from lib.constants import MP4_TO_STANDARD, STANDARD_TO_MP4, MP4_TUPLE_REVERSE, MP4_INT_FIELDS, MP4_BOOL_FIELDS
 
 
 class MP4Writer(MetaWriter):
@@ -45,7 +44,7 @@ class MP4Writer(MetaWriter):
     def _write_pic(self, values: set) -> None:
         covers = []
         for img in values:
-            if not isinstance(img, ImageTag):
+            if not isinstance(img, InternalImageTag):
                 continue
             mime = img.mime or ""
             fmt = MP4Cover.FORMAT_JPEG if mime.endswith(("jpeg", "jpg")) else MP4Cover.FORMAT_PNG
@@ -168,7 +167,7 @@ class MP4Reader(MetaReader):
             if img_format is None:
                 logger.warning(f"{self.file_p}有不支持的图片格式: {p.imageformat}")
                 continue
-            pic = ImageTag(data=bytes(p), type=ImageType.Front, desc=None, mime=img_format)
+            pic = InternalImageTag(data=bytes(p), type=ImageType.Front, desc=None, mime=img_format)
             result.setdefault("PIC", set()).add(pic)
         return result
 

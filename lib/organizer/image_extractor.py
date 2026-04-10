@@ -4,10 +4,9 @@ from collections import defaultdict
 from PIL import Image
 from typing import Any
 
-from lib.organizer.consts import ALLOWED_READ_AUDIO_FORMAT
-from lib.tags.registery_consts import TYPE_TO_READER, TYPE_TO_WRITER
-from lib.tags.image import ImageTag
-from lib.common.path_manager import PathManager
+from lib.constants import ALLOWED_READ_AUDIO_FORMAT, TYPE_TO_READER, TYPE_TO_WRITER
+from lib.tags import InternalImageTag
+from lib.common import PathManager
 
 
 # --------------------------------------------------------------------------- #
@@ -62,7 +61,7 @@ class ImageExtractor:
         print(f"\n处理专辑目录：{album_dir}")
 
         # 收集所有去重后的图片（以 bytes 为 key 去重）
-        unique_images: dict[str, ImageTag] = {}
+        unique_images: dict[str, InternalImageTag] = {}
         pending_del_pic: list[tuple[Path, Any, dict]] = []
 
         for f in files:
@@ -78,7 +77,7 @@ class ImageExtractor:
             internal["PIC"] = set()
             pending_del_pic.append((f, audio_type, internal))
             for pic in pics:
-                if isinstance(pic, ImageTag) and pic.data:
+                if isinstance(pic, InternalImageTag) and pic.data:
                     digest = hashlib.sha256(pic.data).hexdigest()
                     unique_images.setdefault(digest, pic)
 
@@ -102,7 +101,7 @@ class ImageExtractor:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def _save_images(album_dir: Path, images: list[ImageTag]) -> int:
+    def _save_images(album_dir: Path, images: list[InternalImageTag]) -> int:
         count = 0
         for i, img in enumerate(images):
             if i == 0:

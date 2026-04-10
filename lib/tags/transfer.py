@@ -1,7 +1,8 @@
 from pathlib import Path
 import mutagen
-from lib.tags.base import MetaReader, MetaWriter, InternalTags
-from lib.tags.registery_consts import TYPE_TO_READER, TYPE_TO_WRITER, TAG_GROUPS
+
+from . import MetaReader, MetaWriter, InternalTags
+from lib.constants import TYPE_TO_READER, TYPE_TO_WRITER, TAG_GROUPS
 
 
 class TagsTransfer:

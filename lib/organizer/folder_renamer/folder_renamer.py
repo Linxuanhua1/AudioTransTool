@@ -2,11 +2,9 @@ from pathlib import Path
 from typing import Callable
 from jinja2 import Template
 
-from lib.common.path_manager import PathManager
-from lib.organizer.folder_scanner.folder_scanner import FolderScanner
-from .field_extractor import FieldExtractor
-from lib.organizer.folder_utils import FolderUtils
-from .pattern_validator import PatternValidator
+from lib.common import PathManager
+from .. import FolderScanner, FolderUtils
+from . import FieldExtractor, PatternValidator
 
 
 class FolderRenamer:

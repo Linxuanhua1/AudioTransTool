@@ -5,9 +5,9 @@ from mutagen.id3 import (
     TextFrame, UrlFrame, NumericPartTextFrame, PairedTextFrame, TPOS, TRCK,
     USLT, PCST, APIC, COMM, TXXX, WXXX, UFID, ID3)
 
-from lib.tags.image import ImageTag, ImageType
-from lib.tags.field_map import ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_TO_ID3, ID3_TUPLE_REVERSE, ID3_FRAME_CLASSES
-from lib.tags.base import MetaReader, MetaWriter, InternalTags, logger
+from . import InternalImageTag, ImageType
+from lib.constants import ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_TO_ID3, ID3_TUPLE_REVERSE, ID3_FRAME_CLASSES
+from .base import MetaReader, MetaWriter, InternalTags, logger
 
 
 class ID3Writer(MetaWriter):
@@ -54,7 +54,7 @@ class ID3Writer(MetaWriter):
 
     def _write_pic(self, values: set) -> None:
         for img in values:
-            if not isinstance(img, ImageTag):
+            if not isinstance(img, InternalImageTag):
                 continue
             pic_type = img.type.value if isinstance(img.type, ImageType) else (img.type or 0)
             self.tags.add(APIC(
@@ -105,7 +105,7 @@ class ID3Writer(MetaWriter):
     def _write_standard_frame(self, id3_key: str, values: set) -> None:
         frame_cls = ID3_FRAME_CLASSES.get(id3_key)
         if frame_cls is None:
-            logger.warning("id3 key %s 没有对应的帧类，跳过", id3_key)
+            logger.warning(f"id3 key {id3_key}没有对应的帧类，跳过")
             return
         if issubclass(frame_cls, UrlFrame):
             for v in values:
@@ -204,7 +204,7 @@ class ID3Reader(MetaReader):
         return {map_field: {tag.url}}
 
     def _handle_apic(self, tag, field) -> InternalTags:
-        pic = ImageTag(data=tag.data, type=tag.type, desc=tag.desc, mime=tag.mime)
+        pic = InternalImageTag(data=tag.data, type=tag.type, desc=tag.desc, mime=tag.mime)
         return {"PIC": {pic}}
 
     def _handle_ufid(self, tag, field) -> InternalTags:

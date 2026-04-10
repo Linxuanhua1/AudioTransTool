@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from lib.common.path_manager import PathManager
+
+from lib.common import PathManager
 
 
 # --------------------------------------------------------------------------- #

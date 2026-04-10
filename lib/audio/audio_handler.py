@@ -1,13 +1,12 @@
 import subprocess, struct, os
-from lib.tags.transfer import TagsTransfer
 from pathlib import Path
 from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum, auto
 from abc import ABC, abstractmethod
-from lib.common.probe import probe
-from lib.common.path_manager import PathManager
-from lib.common.log import setup_logger
+
+from lib.tags.transfer import TagsTransfer
+from lib.common import probe, PathManager, setup_logger
 
 os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
 

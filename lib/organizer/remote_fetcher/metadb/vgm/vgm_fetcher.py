@@ -1,9 +1,8 @@
 from bs4 import BeautifulSoup
 
-from lib.common.log import setup_logger
-from .consts import URL_RE, HEADERS
-from .parser import VgmParser
-from .handler import (FranchiseFlatHandler, FranchiseGroupedHandler, VgmFileHandler,
+from lib.common import setup_logger
+from lib.constants import VGM_URL_RE, VGM_HEADERS
+from . import (VgmParser, FranchiseFlatHandler, FranchiseGroupedHandler, VgmFileHandler,
                       VgmHttpClient, AlbumBatchProcessor, ProductHandler)
 
 
@@ -17,8 +16,8 @@ class VgmFetcher:
             raise Exception("cookie不能为空")
         self.franchise_mode = config["franchise_mode"]
         self.fetch_threads = config["fetch_threads"]
-        HEADERS['cookie'] = config["cookie"]
-        self.headers = HEADERS
+        VGM_HEADERS['cookie'] = config["cookie"]
+        self.headers = VGM_HEADERS
         self.product_fld_tpl = config["product_fld_tpl"]
         self.album_fld_tpl = config["album_fld_tpl"]
 
@@ -33,7 +32,7 @@ class VgmFetcher:
     def process(self, url: str) -> None:
         """处理VGM URL，自动识别类型并分发"""
         url = url.strip().rstrip("/")
-        if not URL_RE.match(url):
+        if not VGM_URL_RE.match(url):
             logger.info(f"不支持的 URL: {url}", extra={"plain": True})
             logger.info("仅支持 https://vgmdb.net/product/<id>", extra={"plain": True})
             return

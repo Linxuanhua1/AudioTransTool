@@ -2,9 +2,8 @@ import mutagen
 from mutagen.apev2 import APEv2
 from pathlib import Path
 
-from .image import ImageTag, ImageType
-from .field_map import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
-from .base import MetaReader, MetaWriter, InternalTags
+from . import InternalImageTag, ImageType, MetaReader, MetaWriter, InternalTags
+from lib.constants import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
 
 
 class APEv2Writer(MetaWriter):
@@ -28,7 +27,7 @@ class APEv2Writer(MetaWriter):
 
     def _write_pic(self, values: set) -> None:
         for img in values:
-            if not isinstance(img, ImageTag):
+            if not isinstance(img, InternalImageTag):
                 continue
             img_type = img.type if isinstance(img.type, ImageType) else ImageType.Front
             ape_field = IMAGE_TYPE_TO_APE.get(img_type, "Cover Art (Front)")
@@ -75,7 +74,7 @@ class APEv2Reader(MetaReader):
         delimiter = tag.value.find(b"\x00")
         comment = tag.value[:delimiter].decode("utf-8", "replace")
         suffix = Path(comment).suffix.lower().lstrip(".")
-        pic = ImageTag(
+        pic = InternalImageTag(
             data=tag.value[delimiter + 1:],
             type=img_type,
             desc=None,

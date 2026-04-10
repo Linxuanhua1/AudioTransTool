@@ -2,9 +2,7 @@ import subprocess, chardet, os
 from pathlib import Path
 from mutagen.flac import FLAC
 from typing import Any
-from lib.common.path_manager import PathManager
-from lib.common.probe import probe
-from lib.common.log import setup_logger
+from lib.common import PathManager, probe, setup_logger
 
 os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
 

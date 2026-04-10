@@ -3,8 +3,7 @@ from collections import Counter
 
 from jinja2 import Template
 
-from lib.organizer.folder_scanner.consts import _IMAGE_FORMATS, _AUDIO_FORMAT_ORDER
-from lib.organizer.consts import ALLOWED_READ_AUDIO_FORMAT
+from lib.constants import IMAGE_FORMATS, AUDIO_FORMAT_ORDER, ALLOWED_READ_AUDIO_FORMAT
 from lib.organizer.folder_scanner.scan_models import ScanResult, FolderStatus
 from lib.organizer.folder_scanner.audio_info import AudioSource, AudioQuality
 
@@ -31,7 +30,7 @@ class FolderScanner:
             ext = p.suffix.lower()
             
             # 统计图片格式
-            if ext in _IMAGE_FORMATS:
+            if ext in IMAGE_FORMATS:
                 # 标准化扩展名（.jpg 和 .jpeg 统一为 .jpg）
                 normalized_ext = ".jpg" if ext == ".jpeg" else ext
                 image_counter[normalized_ext] += 1
@@ -61,7 +60,7 @@ class FolderScanner:
     def build_suffix(found_formats: set[str], status: FolderStatus, folder_content_template: Template) -> str:
         """构建形如 flac+dsf+iso+jpg+png 的后缀字符串。"""
         # 音频格式按优先级排序
-        audio_parts = sorted( (fmt[1:] for fmt in found_formats), key=lambda x: _AUDIO_FORMAT_ORDER.get(f".{x}", 999), )
+        audio_parts = sorted( (fmt[1:] for fmt in found_formats), key=lambda x: AUDIO_FORMAT_ORDER.get(f".{x}", 999), )
         audio_parts = "+".join(audio_parts)
         # 视频格式
         video_parts = [ fmt for fmt, flag in [ ("mp4", status.has_mp4), ("mkv", status.has_mkv), ] if flag ]

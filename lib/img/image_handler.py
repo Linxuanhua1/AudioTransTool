@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from lib.common.probe import probe
-from lib.common.log import setup_logger
+
+from lib.common import probe, setup_logger
 
 
 logger = setup_logger()

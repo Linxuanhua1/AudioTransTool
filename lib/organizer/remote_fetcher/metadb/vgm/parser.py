@@ -2,7 +2,7 @@ import re
 from bs4 import BeautifulSoup, Tag
 
 from lib.organizer.remote_fetcher.metadb.vgm.data_type import AlbumInfo
-from lib.organizer.remote_fetcher.metadb.vgm.consts import VGM_FIELD_MAP, PRODUCT_CATEGORIES, BASE_URL, MONTH_MAP
+from lib.constants import VGM_FIELD_MAP, VGM_PRODUCT_CATEGORIES, VGM_BASE_URL, VGM_MONTH_MAP
 
 
 class VgmParser:
@@ -46,7 +46,7 @@ class VgmParser:
     @staticmethod
     def parse_category(soup: BeautifulSoup) -> str:
         text = soup.get_text()
-        for cat in PRODUCT_CATEGORIES:
+        for cat in VGM_PRODUCT_CATEGORIES:
             if re.search(rf"\b{re.escape(cat)}\b", text):
                 return cat
         return "Other"
@@ -76,7 +76,7 @@ class VgmParser:
         m = re.match(r"([A-Z][a-z]{2})\s+(\d{1,2}),\s*(\d{4})", raw)
         if m:
             mon_str, day, year = m.groups()
-            month = MONTH_MAP.get(mon_str)
+            month = VGM_MONTH_MAP.get(mon_str)
             if month:
                 return f"{int(year):04d}.{month:02d}.{int(day):02d}"
 
@@ -103,7 +103,7 @@ class VgmParser:
                 continue
             seen.add(aid)
 
-            full_url = href if href.startswith("http") else BASE_URL + href
+            full_url = href if href.startswith("http") else VGM_BASE_URL + href
             full_url = VgmParser.normalize_url(full_url)
 
             catno = ""
@@ -137,7 +137,7 @@ class VgmParser:
                 continue
             seen.add(pid)
 
-            full_url = href if href.startswith("http") else BASE_URL + href
+            full_url = href if href.startswith("http") else VGM_BASE_URL + href
             full_url = VgmParser.normalize_url(full_url)
             date_str, ptype = "", ""
 
@@ -148,7 +148,7 @@ class VgmParser:
                     if re.match(r"\d{4}", cell_text) and cell != a.find_parent("td"):
                         if not date_str:
                             date_str = cell_text
-                    for cat in PRODUCT_CATEGORIES:
+                    for cat in VGM_PRODUCT_CATEGORIES:
                         if cat.lower() in cell_text.lower():
                             ptype = cat
                             break

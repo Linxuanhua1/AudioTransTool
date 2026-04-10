@@ -2,7 +2,7 @@ from decimal import Decimal
 from pathlib import Path
 import subprocess, json
 
-from .consts import _DSD_RATE_MAP, _COMMENT_SOURCE_MAP
+from lib.constants import DSD_RATE_MAP, COMMENT_SOURCE_MAP
 from .scan_models import FolderStatus
 from lib.common import probe
 
@@ -140,7 +140,7 @@ class AudioInfoParse:
                 )
 
             case ".dsf":
-                return _DSD_RATE_MAP.get(
+                return DSD_RATE_MAP.get(
                     AudioInfoParse._fmt_mhz_key(stream["SampleRate"]),
                     "N/A"
                 )
@@ -206,7 +206,7 @@ class AudioInfoParse:
 
         match data_format:
             case "dsd":
-                return _DSD_RATE_MAP.get(AudioInfoParse._fmt_mhz_key(sample_rate), "N/A")
+                return DSD_RATE_MAP.get(AudioInfoParse._fmt_mhz_key(sample_rate), "N/A")
             case "ints":
                 return AudioInfoParse._join_pcm_quality(depth, sample_rate)
             case "floats":
@@ -246,7 +246,7 @@ class AudioSource:
                     return "Amazon", ""
 
                 comment_lower = bundle.comment.lower()
-                for key, value in _COMMENT_SOURCE_MAP.items():
+                for key, value in COMMENT_SOURCE_MAP.items():
                     if key in comment_lower:
                         return value, ""
 
