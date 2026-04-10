@@ -1,9 +1,3 @@
-"""
-Tag 映射常量
-包含各种音频格式的tag字段映射、图片类型映射等
-整合自原 lib/tags/field_map.py 和 lib/tags/registery_consts.py
-"""
-
 from mutagen.id3 import (
     TALB, TBPM, TCOM, TCON, TCOP, TCMP, TDEN, TDES, TKWD, TCAT,
     MVNM, MVIN, GRP1, TDOR, TDLY, TDRC, TDRL, TDTG, TENC, TEXT, TFLT,
@@ -28,17 +22,11 @@ from mutagen.tak import TAK
 from mutagen.mp4 import MP4
 from mutagen.asf import ASF
 
-from lib.tags.data_type import ImageType
-from lib.tags.base import MetaReader, MetaWriter
-from lib.tags.id3 import ID3Reader, ID3Writer
-from lib.tags.mp4 import MP4Reader, MP4Writer
-from lib.tags.apev2 import APEv2Reader, APEv2Writer
-from lib.tags.vorbis import VorbisReader, VorbisWriter
-from lib.tags.asf import AsfReader
+from lib.tags import ImageType
 
 
 # ============================================================================
-# Mutagen 文件类型分组
+# Mutagen 文件类型分组（不涉及循环导入）
 # ============================================================================
 
 ID3_TYPES = (MP3, TrueAudio, WAVE, AIFF, DSF)
@@ -49,31 +37,88 @@ ASF_TYPES = ASF
 
 
 # ============================================================================
-# Tag 类型到 Reader/Writer 的映射
+# 延迟导入机制 - 避免循环依赖
 # ============================================================================
 
-TYPE_TO_READER: dict[type, type[MetaReader]] = {
-    **{t: ID3Reader for t in ID3_TYPES},
-    **{t: VorbisReader for t in VORBIS_TYPES},
-    **{t: MP4Reader for t in MP4_TYPES},
-    **{t: APEv2Reader for t in APEV2_TYPES},
-    ASF: AsfReader
-}
+# 缓存已构建的映射，避免重复导入
+_TYPE_TO_READER_CACHE = None
+_TYPE_TO_WRITER_CACHE = None
+_TAG_GROUPS_CACHE = None
 
-TYPE_TO_WRITER: dict[type, type[MetaWriter]] = {
-    **{t: ID3Writer for t in ID3_TYPES},
-    **{t: VorbisWriter for t in VORBIS_TYPES},
-    **{t: MP4Writer for t in MP4_TYPES},
-    **{t: APEv2Writer for t in APEV2_TYPES},
-}
 
-# 同 tag 格式分组，用于直通判断
-TAG_GROUPS: list[tuple[type[MetaReader], type[MetaWriter]]] = [
-    (ID3Reader, ID3Writer),
-    (VorbisReader, VorbisWriter),
-    (MP4Reader, MP4Writer),
-    (APEv2Reader, APEv2Writer),
-]
+def _get_type_to_reader():
+    """延迟构建 TYPE_TO_READER 映射，避免循环导入"""
+    global _TYPE_TO_READER_CACHE
+    if _TYPE_TO_READER_CACHE is None:
+        # 在函数内部导入，避免模块加载时的循环依赖
+        from lib.tags.id3 import ID3Reader
+        from lib.tags.mp4 import MP4Reader
+        from lib.tags.apev2 import APEv2Reader
+        from lib.tags.vorbis import VorbisReader
+        from lib.tags.asf import AsfReader
+        
+        _TYPE_TO_READER_CACHE = {
+            **{t: ID3Reader for t in ID3_TYPES},
+            **{t: VorbisReader for t in VORBIS_TYPES},
+            **{t: MP4Reader for t in MP4_TYPES},
+            **{t: APEv2Reader for t in APEV2_TYPES},
+            ASF: AsfReader
+        }
+    return _TYPE_TO_READER_CACHE
+
+
+def _get_type_to_writer():
+    """延迟构建 TYPE_TO_WRITER 映射，避免循环导入"""
+    global _TYPE_TO_WRITER_CACHE
+    if _TYPE_TO_WRITER_CACHE is None:
+        from lib.tags.id3 import ID3Writer
+        from lib.tags.mp4 import MP4Writer
+        from lib.tags.apev2 import APEv2Writer
+        from lib.tags.vorbis import VorbisWriter
+        
+        _TYPE_TO_WRITER_CACHE = {
+            **{t: ID3Writer for t in ID3_TYPES},
+            **{t: VorbisWriter for t in VORBIS_TYPES},
+            **{t: MP4Writer for t in MP4_TYPES},
+            **{t: APEv2Writer for t in APEV2_TYPES},
+        }
+    return _TYPE_TO_WRITER_CACHE
+
+
+def _get_tag_groups():
+    """延迟构建 TAG_GROUPS 映射，避免循环导入"""
+    global _TAG_GROUPS_CACHE
+    if _TAG_GROUPS_CACHE is None:
+        from lib.tags.id3 import ID3Reader, ID3Writer
+        from lib.tags.mp4 import MP4Reader, MP4Writer
+        from lib.tags.apev2 import APEv2Reader, APEv2Writer
+        from lib.tags.vorbis import VorbisReader, VorbisWriter
+        
+        _TAG_GROUPS_CACHE = [
+            (ID3Reader, ID3Writer),
+            (VorbisReader, VorbisWriter),
+            (MP4Reader, MP4Writer),
+            (APEv2Reader, APEv2Writer),
+        ]
+    return _TAG_GROUPS_CACHE
+
+
+# ============================================================================
+# 模块级延迟导入接口（Python 3.7+）
+# ============================================================================
+
+def __getattr__(name):
+    """
+    模块级属性访问器，实现延迟导入
+    使用方式：from lib.constants import TYPE_TO_READER  # 自动调用延迟导入
+    """
+    if name == 'TYPE_TO_READER':
+        return _get_type_to_reader()
+    elif name == 'TYPE_TO_WRITER':
+        return _get_type_to_writer()
+    elif name == 'TAG_GROUPS':
+        return _get_tag_groups()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 # ============================================================================

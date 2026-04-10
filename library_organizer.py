@@ -2,12 +2,8 @@ import tomllib
 from typing import Callable
 from pathlib import Path
 
-from lib.common.generate_config import generate_config
-from lib.organizer.folder_renamer.folder_renamer import FolderRenamer
-from lib.organizer.tag_separator import TagSeparator
-from lib.organizer.remote_fetcher.remote_fetcher import RemoteFetcher
-from lib.organizer.image_extractor import ImageExtractor
-from lib.common.log import setup_logger
+from lib.organizer import FolderRenamer, TagSeparator, RemoteFetcher, ImageExtractor
+from lib.common import setup_logger, generate_config
 
 
 logger = setup_logger(__name__)

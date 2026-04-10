@@ -1,6 +1,11 @@
 """
 常量模块统一导出
 所有常量集中管理，方便统一导入
+
+使用延迟导入机制避免循环依赖：
+- AUDIO_HANDLERS, IMAGE_HANDLERS（handlers → audio_handler → transfer → constants）
+- TYPE_TO_READER, TYPE_TO_WRITER, TAG_GROUPS（tags → constants）
+均通过 __getattr__ 机制延迟加载
 """
 
 # 格式相关
@@ -40,10 +45,6 @@ from .tag_mappings import (
     MP4_TYPES,
     APEV2_TYPES,
     ASF_TYPES,
-    # Reader/Writer 映射
-    TYPE_TO_READER,
-    TYPE_TO_WRITER,
-    TAG_GROUPS,
     # ID3 映射
     ID3_NOT_SUPPORTED,
     ID3_TO_STANDARD,
@@ -64,11 +65,28 @@ from .tag_mappings import (
     ASF_TO_STANDARD,
 )
 
-# 处理器映射相关
-from .handlers import (
-    AUDIO_HANDLERS,
-    IMAGE_HANDLERS,
-)
+# ============================================================================
+# 延迟导入的常量（通过 __getattr__ 机制）
+# 以下常量存在循环依赖，必须延迟加载：
+#   - AUDIO_HANDLERS, IMAGE_HANDLERS (handlers → audio_handler → transfer → constants)
+#   - TYPE_TO_READER, TYPE_TO_WRITER, TAG_GROUPS (tags → constants)
+# ============================================================================
+
+def __getattr__(name):
+    """
+    模块级延迟导入接口
+    支持：TYPE_TO_READER, TYPE_TO_WRITER, TAG_GROUPS, AUDIO_HANDLERS, IMAGE_HANDLERS
+    """
+    if name in ('TYPE_TO_READER', 'TYPE_TO_WRITER', 'TAG_GROUPS'):
+        from . import tag_mappings
+        return getattr(tag_mappings, name)
+    if name in ('AUDIO_HANDLERS', 'IMAGE_HANDLERS'):
+        from .handlers import AUDIO_HANDLERS, IMAGE_HANDLERS
+        # 写入模块属性，后续访问不再触发 __getattr__
+        globals()['AUDIO_HANDLERS'] = AUDIO_HANDLERS
+        globals()['IMAGE_HANDLERS'] = IMAGE_HANDLERS
+        return globals()[name]
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 __all__ = [
@@ -89,15 +107,7 @@ __all__ = [
     'VGM_PRODUCT_CATEGORIES',
     'VGM_FIELD_MAP',
     'VGM_MONTH_MAP',
-    # Tag 映射
-    'ID3_TYPES',
-    'VORBIS_TYPES',
-    'MP4_TYPES',
-    'APEV2_TYPES',
-    'ASF_TYPES',
-    'TYPE_TO_READER',
-    'TYPE_TO_WRITER',
-    'TAG_GROUPS',
+    # Tag 映射（纯数据）
     'ID3_NOT_SUPPORTED',
     'ID3_TO_STANDARD',
     'STANDARD_TO_ID3',
