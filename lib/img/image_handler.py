@@ -1,6 +1,4 @@
-import logging
-
-import pyvips, subprocess
+import pyvips, subprocess, logging
 from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager

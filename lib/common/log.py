@@ -17,8 +17,8 @@ class ExcludePlainFilter(logging.Filter):
         return not getattr(record, "plain", False)
 
 
-def setup_logger(logger_name: str = "app") -> logging.Logger:
-    logger = logging.getLogger(logger_name)
+def setup_logger() -> logging.Logger:
+    logger = logging.getLogger()
     if logger.handlers:
         return logger
 

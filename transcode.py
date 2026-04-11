@@ -1,4 +1,5 @@
-import tomllib
+import tomllib, os
+os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.getcwd() + '/bin/'
 from pathlib import Path
 from lib.common.generate_config import generate_config
 from lib.task_manager import TaskManager, TaskType
@@ -11,6 +12,7 @@ def main():
 
     with open("config.toml", 'rb') as f:
         config = tomllib.load(f)
+
     logger = setup_logger()
 
     while True:

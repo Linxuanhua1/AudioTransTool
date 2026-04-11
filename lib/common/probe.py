@@ -1,9 +1,8 @@
-import subprocess, json
+import subprocess, json, logging
 from pathlib import Path
-from lib.common.log import setup_logger
 
 
-logger = setup_logger()
+logger = logging.getLogger(__name__)
 
 
 def probe(file_p: Path) -> dict:

@@ -1,9 +1,8 @@
-import os, threading
+import os, threading, logging
 from pathlib import Path
-from lib.common.log import setup_logger
 
 
-logger = setup_logger()
+logger = logging.getLogger(__name__)
 
 
 class PathManager:

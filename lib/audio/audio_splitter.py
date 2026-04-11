@@ -1,10 +1,8 @@
-import subprocess, chardet, os, logging
+import subprocess, chardet, logging
 from pathlib import Path
 from mutagen.flac import FLAC
 from typing import Any
 from lib.common import PathManager, probe
-
-os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
 
 
 logger = logging.getLogger(__name__)

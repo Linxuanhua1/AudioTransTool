@@ -108,6 +108,9 @@ __all__ = [
     'VGM_FIELD_MAP',
     'VGM_MONTH_MAP',
     # Tag 映射（纯数据）
+    'TYPE_TO_READER',
+    'TYPE_TO_WRITER',
+    'TAG_GROUPS',
     'ID3_NOT_SUPPORTED',
     'ID3_TO_STANDARD',
     'STANDARD_TO_ID3',

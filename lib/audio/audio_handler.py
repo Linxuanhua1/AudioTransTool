@@ -1,4 +1,4 @@
-import subprocess, struct, os, logging
+import subprocess, struct, logging
 from pathlib import Path
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -7,8 +7,6 @@ from abc import ABC, abstractmethod
 
 from lib.tags.transfer import TagsTransfer
 from lib.common import probe, PathManager
-
-os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
 
 logger = logging.getLogger(__name__)
 
