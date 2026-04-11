@@ -4,8 +4,6 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
-from lib.common import probe
-
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +19,6 @@ class ImageHandler(ABC):
         self.file_p: Path = file_p
         self.out_p: Path = file_p.with_suffix(".jxl")
         self.is_del_src_img = config["is_del_src_img"]
-
-    @abstractmethod
-    def _is_enc2jxl(self) -> bool:
-        pass
 
     @abstractmethod
     def compress_img(self):
@@ -93,71 +87,40 @@ class ImageHandler(ABC):
 
 
 class TiffHandler(ImageHandler):
-    def _is_enc2jxl(self) -> bool:
-        metadata = probe(self.file_p)
-        color_space = int(metadata['PhotometricInterpretation'])
-        bit_depth = int(metadata['BitsPerSample'].split(" ")[0])
-        if color_space in (0, 1, 2, 3, 4, 6) and bit_depth in (8, 16, 32):
-            return True
-        logger.error(f"{self.file_p} 不支持转换为 jxl")
-        return False
-
     def compress_img(self):
-        if not self._is_enc2jxl():
-            return
         tmp_png_p = self.file_p.with_suffix(".png")
         with self._processing_guard(tmp_png_p, self.out_p):
             self._reencode2jxl_via_png()
             self._finalize_output()
-            tmp_png_p.unlink(missing_ok=True)  # 成功时也要清理临时 png
+            tmp_png_p.unlink(missing_ok=True)
 
 
 class WebpHandler(ImageHandler):
-    def _is_enc2jxl(self) -> bool:
-        pass
-
     def compress_img(self):
         tmp_png_p = self.file_p.with_suffix(".png")
         with self._processing_guard(tmp_png_p, self.out_p):
             self._reencode2jxl_via_png()
             self._finalize_output()
-            tmp_png_p.unlink(missing_ok=True)  # 成功时也要清理临时 png
+            tmp_png_p.unlink(missing_ok=True)
 
 
 class BmpHandler(ImageHandler):
-    def _is_enc2jxl(self) -> bool:
-        pass
-
     def compress_img(self):
         tmp_png_p = self.file_p.with_suffix(".png")
         with self._processing_guard(tmp_png_p, self.out_p):
             self._reencode2jxl_via_png()
             self._finalize_output()
-            tmp_png_p.unlink(missing_ok=True)  # 成功时也要清理临时 png
+            tmp_png_p.unlink(missing_ok=True)
 
 
 class JpgHandler(ImageHandler):
-    def _is_enc2jxl(self) -> bool:
-        metadata = probe(self.file_p)
-        color_components = len(metadata["BitsPerSample"].split(" "))
-        if color_components in (1, 3):
-            return True
-        logger.error(f"{self.file_p} 不支持转换为 jxl（颜色分量数：{color_components}）")
-        return False
-
     def compress_img(self):
-        if not self._is_enc2jxl():
-            return
-
         with self._processing_guard(self.out_p):
             self._reencode_file2jxl()
             self._finalize_output()
 
 
 class PngHandler(ImageHandler):
-    def _is_enc2jxl(self) -> bool:
-        pass
-
     def compress_img(self):
         with self._processing_guard(self.out_p):
             self._reencode_file2jxl()

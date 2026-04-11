@@ -2,7 +2,8 @@ import subprocess, chardet, logging
 from pathlib import Path
 from mutagen.flac import FLAC
 from typing import Any
-from lib.common import PathManager, probe
+from lib.common import PathManager
+from lib.common.probe import MediaProbe
 
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class Splitter:
     def split_flac_with_cue(self):
         logger.debug(f"正在分轨{self.file_p}")
         tracks = CueParser.paser_cue_data(self.file_p.with_suffix('.cue'))
-        stream = probe(self.file_p)
+        stream = MediaProbe.probe(self.file_p)[0]
 
         sample_rate, channels, bps = stream['SampleRate'], stream['Channels'], stream['BitsPerSample']
         logger.debug(f"正在将{self.file_p}转换为pcm数据缓存到内存中")

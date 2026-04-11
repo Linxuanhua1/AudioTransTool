@@ -1,50 +1,89 @@
-import subprocess, json, logging
+import json, subprocess, logging
 from pathlib import Path
 
 
 logger = logging.getLogger(__name__)
 
 
-def probe(file_p: Path) -> dict:
-    try:
-        if file_p.suffix == '.wv':
-            cmd = ['wvunpack', '-s', file_p]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
-            output = parse_wvunpack_output(result.stdout)
-            return output
-        else:
-            cmd = ['exiftool', '-j', '-n', "-@", "-"]
-            result = subprocess.run(cmd, input=str(file_p), capture_output=True,
-                                    text=True, check=True, encoding='utf-8')
-            return json.loads(result.stdout)[0]
-    except subprocess.CalledProcessError as e:
-        output = f"{e.stdout}\n{e.stderr}"
-        if "Unknown file type" in output:
+class MediaProbe:
+    @staticmethod
+    def probe(file_p: Path | list[Path]) -> list[dict]:
+        paths = MediaProbe._normalize_paths(file_p)
+        if not paths:
             return None
-        else:
+
+        wv_paths = [p for p in paths if p.suffix.lower() == ".wv"]
+        other_paths = [p for p in paths if p.suffix.lower() != ".wv"]
+
+        results: list[dict] = []
+
+        # wvunpack -s 不能一次直接传多个文件，否则第二个会被当成 outfile
+        for path in wv_paths:
+            result = MediaProbe._probe_wv(path)
+            if result:
+                results.append(result)
+
+        # exiftool 可以批量
+        if other_paths:
+            other_results = MediaProbe._probe_other_batch(other_paths)
+            if other_results:
+                results.extend(other_results)
+
+        return results
+
+    @staticmethod
+    def _normalize_paths(file_p: Path | list[Path]) -> list[Path]:
+        if isinstance(file_p, Path):
+            return [file_p]
+        return list(file_p)
+
+    @staticmethod
+    def _probe_wv(file_p: Path) -> dict | None:
+        try:
+            cmd = ["wvunpack", "-s", str(file_p)]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding="utf-8")
+            parsed = MediaProbe.parse_wvunpack_output(result.stdout)
+            parsed['SourceFile'] = str(file_p)
+            return parsed
+        except subprocess.CalledProcessError as e:
             logger.error(e.stderr)
             logger.error(e.stdout)
             return None
 
-def parse_wvunpack_output(text: str) -> dict:
-    result = {}
+    @staticmethod
+    def _probe_other_batch(paths: list[Path]) -> list[dict] | None:
+        try:
+            cmd = ["exiftool", "-j", "-n", "-@", "-"]
+            input_text = "\n".join(str(p) for p in paths)
 
-    for line in text.splitlines():
-        line = line.strip()
-        if not line:
-            continue
+            result = subprocess.run(cmd, input=input_text, capture_output=True, text=True, check=True, encoding="utf-8")
+            return json.loads(result.stdout)
+        except subprocess.CalledProcessError as e:
+            output = f"{e.stdout}\n{e.stderr}"
+            if "Unknown file type" in output:
+                return None
+            logger.error(e.stderr)
+            logger.error(e.stdout)
+            return None
 
-        # 跳过标题行
-        if line.startswith("WVUNPACK"):
-            continue
-        if line.startswith("Copyright"):
-            continue
+    @staticmethod
+    def parse_wvunpack_output(text: str) -> dict:
+        result = {}
 
-        # 只处理 k:v 形式
-        if ":" not in line:
-            continue
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
 
-        key, value = line.split(":", 1)
-        result[key.strip()] = value.strip()
+            if line.startswith("WVUNPACK"):
+                continue
+            if line.startswith("Copyright"):
+                continue
 
-    return result
+            if ":" not in line:
+                continue
+
+            key, value = line.split(":", 1)
+            result[key.strip()] = value.strip()
+
+        return result

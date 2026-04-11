@@ -4,7 +4,7 @@ import subprocess, json
 
 from lib.constants import DSD_RATE_MAP, COMMENT_SOURCE_MAP
 from .scan_models import FolderStatus
-from lib.common import probe
+from lib.common.probe import MediaProbe
 
 
 class AudioQuality:
@@ -94,17 +94,30 @@ class AudioQuality:
         found_formats: set[str] = set()
         qualities: set[AudioQuality] = set()
 
+        if not audio_files:
+            return "N/A", found_formats
+
+        # 批量 probe
+        results = MediaProbe.probe(audio_files)
+
+        # 构建路径到元数据的映射
+        metadata_map: dict[Path, dict] = {}
+        if results:
+            for r in results:
+                metadata_map[Path(r['SourceFile'])] = r
+
         for file_p in audio_files:
             ext = file_p.suffix.lower()
             found_formats.add(ext)
 
             try:
-                info = probe(file_p)
+                info = metadata_map.get(file_p)
+                if info is None:
+                    continue
                 quality_str = AudioInfoParse.parse_probe(ext, info)
                 if quality_str != "N/A":
                     qualities.add(AudioQuality(quality_str))
             except Exception:
-                # 探测失败时跳过该文件
                 continue
 
         # 排序并用+连接
