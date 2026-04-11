@@ -39,6 +39,10 @@ class ImageHandler(ABC):
                 p.unlink(missing_ok=True)
                 logger.debug(f"已删除不完整的输出文件：{p}")
             logger.error(str(e))
+        except KeyboardInterrupt as e:
+            for p in output_paths:
+                p.unlink(missing_ok=True)
+                logger.info(f"用户手动停止，已删除不完整的输出文件：{p}")
 
     @staticmethod
     def _run_jxl_encode(cmd, file_p: Path, out_p: Path):

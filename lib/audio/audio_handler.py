@@ -53,6 +53,10 @@ class AudioHandler(ABC):
                 p.unlink(missing_ok=True)
                 logger.error(f"已删除不完整的输出文件：{p}")
             logger.error(str(e))
+        except KeyboardInterrupt as e:
+            for p in output_paths:
+                p.unlink(missing_ok=True)
+                logger.info(f"用户手动停止，已删除不完整的输出文件：{p}")
 
     # ------------------------------------------------------------------ #
     #  编码方法：失败时 raise AudioProcessingError                         #

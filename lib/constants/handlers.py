@@ -2,7 +2,7 @@ from lib.audio.audio_handler import (
     WavHandler, M4aHandler, ApeHandler, TakHandler, TtaHandler,
     FlacHandler, WavepackHandler, DSDHandler, AiffHandler
 )
-from lib.img.image_handler import (
+from lib.image.image_handler import (
     JpgHandler, PngHandler, BmpHandler, TiffHandler, WebpHandler
 )
 
