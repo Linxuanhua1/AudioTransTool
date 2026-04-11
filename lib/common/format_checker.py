@@ -215,7 +215,7 @@ class ImageFormatChecker:
     @staticmethod
     def _check_jpg(metadata: dict, file_p: Path) -> bool:
         try:
-            color_components = len(metadata["BitsPerSample"].split(" "))
+            color_components = len(metadata["ColorComponents"].split(" "))
         except (KeyError, TypeError):
             logger.error(f"{file_p} 无法读取 JPG 元数据")
             return False

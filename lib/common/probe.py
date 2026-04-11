@@ -17,17 +17,17 @@ class MediaProbe:
 
         results: list[dict] = []
 
-        # wvunpack -s 不能一次直接传多个文件，否则第二个会被当成 outfile
-        for path in wv_paths:
-            result = MediaProbe._probe_wv(path)
-            if result:
-                results.append(result)
-
         # exiftool 可以批量
         if other_paths:
             other_results = MediaProbe._probe_other_batch(other_paths)
             if other_results:
                 results.extend(other_results)
+
+        # wvunpack -s 不能一次直接传多个文件，否则第二个会被当成 outfile
+        for path in wv_paths:
+            result = MediaProbe._probe_wv(path)
+            if result:
+                results.append(result)
 
         return results
 
@@ -61,7 +61,7 @@ class MediaProbe:
         except subprocess.CalledProcessError as e:
             output = f"{e.stdout}\n{e.stderr}"
             if "Unknown file type" in output:
-                return None
+                return json.loads(e.stdout)
             logger.error(e.stderr)
             logger.error(e.stdout)
             return None

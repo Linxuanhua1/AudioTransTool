@@ -164,7 +164,7 @@ class ApeHandler(AudioHandler):
     def compress_audio(self):
         self.out_p = self.path_manager.get_output_path(self.file_p.with_suffix(".flac"))
         with self._processing_guard(self.out_p):
-            self._flac_similar_compress(['MAC', self.file_p, '-', '-d'])
+            self._flac_similar_compress(['MAC', self.file_p, '-', '-d', "-threads=16"])
 
 
 class TakHandler(AudioHandler):

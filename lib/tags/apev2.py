@@ -69,8 +69,8 @@ class APEv2Reader(MetaReader):
         return std_tags
 
     @staticmethod
-    def _handle_cover(field, tag) -> InternalTags:
-        img_type = APEV2_TO_STANDARD[field]
+    def _handle_cover(field: str, tag) -> InternalTags:
+        img_type = APEV2_TO_STANDARD[field.upper()]
         delimiter = tag.value.find(b"\x00")
         comment = tag.value[:delimiter].decode("utf-8", "replace")
         suffix = Path(comment).suffix.lower().lstrip(".")
@@ -83,7 +83,7 @@ class APEv2Reader(MetaReader):
         return {"PIC": {pic}}
 
     @staticmethod
-    def _handle_text(field, tag) -> InternalTags:
-        map_field = APEV2_TO_STANDARD.get(field, field)
+    def _handle_text(field:str , tag) -> InternalTags:
+        map_field = APEV2_TO_STANDARD.get(field.upper(), field)
         values = set(tag.value.split(b"\x00")) if b"\x00" in tag else set(tag)
         return {map_field: values}
