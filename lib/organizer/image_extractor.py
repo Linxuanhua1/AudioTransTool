@@ -1,7 +1,6 @@
-import io, mutagen, hashlib
+import mutagen, hashlib, pyvips
 from pathlib import Path
 from collections import defaultdict
-from PIL import Image
 from typing import Any
 
 from lib.constants import ALLOWED_READ_AUDIO_FORMAT, TYPE_TO_READER, TYPE_TO_WRITER
@@ -104,19 +103,17 @@ class ImageExtractor:
     def _save_images(album_dir: Path, images: list[InternalImageTag]) -> int:
         count = 0
         for i, img in enumerate(images):
-            if i == 0:
-                name = "Cover.png"
-            else:
-                name = f"Cover({i + 1}).png"
-
+            name = "Cover.png" if i == 0 else f"Cover({i + 1}).png"
             out_path = album_dir / name
+
             try:
-                pil_img = Image.open(io.BytesIO(img.data))
-                pil_img.save(out_path, format="PNG")
+                vip_img = pyvips.Image.new_from_buffer(img.data, "")
+                vip_img.pngsave(str(out_path))
                 count += 1
                 print(f"  保存：{name}")
             except Exception as e:
                 print(f"  保存图片失败：{e}")
+
         return count
 
     # ------------------------------------------------------------------ #
