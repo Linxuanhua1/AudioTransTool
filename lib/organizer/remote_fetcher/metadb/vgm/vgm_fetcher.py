@@ -1,12 +1,12 @@
 from bs4 import BeautifulSoup
+import logging
 
-from lib.common import setup_logger
 from lib.constants import VGM_URL_RE, VGM_HEADERS
 from . import (VgmParser, FranchiseFlatHandler, FranchiseGroupedHandler, VgmFileHandler,
                       VgmHttpClient, AlbumBatchProcessor, ProductHandler)
 
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class VgmFetcher:

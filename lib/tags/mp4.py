@@ -1,4 +1,4 @@
-import mutagen
+import mutagen, logging
 from pathlib import Path
 from typing import Callable
 
@@ -6,10 +6,9 @@ from mutagen.mp4 import MP4Cover, MP4Tags, MP4FreeForm
 
 from . import InternalImageTag, ImageType, MetaReader, MetaWriter, InternalTags
 from lib.constants import MP4_TO_STANDARD, STANDARD_TO_MP4, MP4_TUPLE_REVERSE, MP4_INT_FIELDS, MP4_BOOL_FIELDS
-from lib.common import setup_logger
 
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class MP4Writer(MetaWriter):
     def __init__(self, output_path: Path):

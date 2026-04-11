@@ -1,13 +1,13 @@
 from pathlib import Path
 from bs4 import BeautifulSoup
-import random, time, threading, requests
+import random, time, threading, requests, logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from . import AlbumInfo, SubProduct, VgmParser
-from lib.common import PathManager, setup_logger
+from lib.common import PathManager
 
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # ======================================================================= #
 # HTTP 客户端（放在最前，其余类依赖它）

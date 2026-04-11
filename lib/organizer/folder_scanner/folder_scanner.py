@@ -1,6 +1,5 @@
 from pathlib import Path
 from collections import Counter
-
 from jinja2 import Template
 
 from lib.constants import IMAGE_FORMATS, AUDIO_FORMAT_ORDER, ALLOWED_READ_AUDIO_FORMAT

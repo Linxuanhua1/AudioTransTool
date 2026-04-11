@@ -1,4 +1,4 @@
-import mutagen
+import mutagen, logging
 from pathlib import Path
 from typing import Callable
 from mutagen.id3 import (
@@ -8,10 +8,9 @@ from mutagen.id3 import (
 from . import InternalImageTag, ImageType
 from lib.constants import ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_TO_ID3, ID3_TUPLE_REVERSE, ID3_FRAME_CLASSES
 from .base import MetaReader, MetaWriter, InternalTags
-from lib.common import setup_logger
 
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ID3Writer(MetaWriter):

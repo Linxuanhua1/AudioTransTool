@@ -1,15 +1,5 @@
-"""
-CatNoHelper
-===========
-与光盘编号、日期格式化和标签文本分割相关的纯函数工具集。
-原 utils.py 中的函数和 folder.py 中的 _normalize_date 统一收归于此。
-"""
-
-from __future__ import annotations
-
 import re
 import tomllib
-from pathlib import Path
 from typing import List
 
 

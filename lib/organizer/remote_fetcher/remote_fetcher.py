@@ -1,15 +1,3 @@
-"""
-RemoteFetcher
-=============
-负责所有需要网络 I/O 的操作：
-  1. 根据光盘编号从 MusicBrainz 拉取 Album ID 并写入音频标签
-  2. 从 VGMdb 页面拉取数据并创建对应文件夹结构
-
-依赖 AudioTagReader（标签读写）、lib.metadb.vgm（VGMdb 解析）。
-"""
-
-from __future__ import annotations
-
 import musicbrainzngs
 
 from lib.organizer.remote_fetcher.metadb import Vgm

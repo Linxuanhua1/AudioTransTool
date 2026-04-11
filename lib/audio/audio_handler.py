@@ -1,4 +1,4 @@
-import subprocess, struct, os
+import subprocess, struct, os, logging
 from pathlib import Path
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -6,11 +6,11 @@ from enum import Enum, auto
 from abc import ABC, abstractmethod
 
 from lib.tags.transfer import TagsTransfer
-from lib.common import probe, PathManager, setup_logger
+from lib.common import probe, PathManager
 
 os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.dirname(os.getcwd()) + '/bin/'
 
-logger = setup_logger()
+logger = logging.getLogger(__name__)
 
 
 class AudioEncodeFormat(Enum):

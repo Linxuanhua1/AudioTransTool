@@ -1,13 +1,15 @@
+import logging
+
 import pyvips, subprocess
 from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
-from lib.common import probe, setup_logger
+from lib.common import probe
 
 
-logger = setup_logger()
+logger = logging.getLogger(__name__)
 
 
 class ImageProcessingError(Exception):

@@ -1,4 +1,4 @@
-import concurrent.futures, pyvips
+import concurrent.futures, pyvips, logging
 from pathlib import Path
 from operator import methodcaller
 from typing import Any, Callable
@@ -10,10 +10,9 @@ from lib.audio.audio_handler import AudioHandler
 from lib.constants import AUDIO_HANDLERS, IMAGE_HANDLERS
 from lib.audio.audio_splitter import Splitter
 from lib.common.path_manager import PathManager
-from lib.common.log import setup_logger
 
 
-logger = setup_logger()
+logger = logging.getLogger(__name__)
 
 
 class TaskType(Enum):
@@ -73,7 +72,7 @@ class TaskManager:
     def process_f(self, folder_p: Path, task_types: list[TaskType]) -> None:
         for task_type in task_types:
             task_en_key = self.task_configs[task_type].enabled_key
-            is_task_enabled = self.config.get(task_en_key, False)
+            is_task_enabled = self.config['transcode'].get(task_en_key, False)
             if is_task_enabled:
                 self._process_single_task_type(folder_p, task_type)
             else:
@@ -87,7 +86,7 @@ class TaskManager:
         tasks = self._collect_tasks(folder_p, task_config)
         if tasks:
             logger.info(f'找到 {len(tasks)} 个{task_config.name}任务')
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.config['max_threads']) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.config['transcode']['max_threads']) as executor:
                 list(tqdm(
                     executor.map(task_config.call_func, tasks),
                     total=len(tasks),
