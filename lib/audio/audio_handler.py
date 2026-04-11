@@ -1,4 +1,4 @@
-import subprocess, struct, logging
+import subprocess, struct, logging, mutagen
 from pathlib import Path
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -57,6 +57,10 @@ class AudioHandler(ABC):
             for p in output_paths:
                 p.unlink(missing_ok=True)
                 logger.debug(f"用户手动停止，已删除不完整的输出文件：{p}")
+        except mutagen.apev2.APEBadItemError as e:
+            for p in output_paths:
+                p.unlink(missing_ok=True)
+                logger.error(f"{self.p}存在无法解析的字段，请手动转码，已删除不完整的输出文件{p}")
 
     # ------------------------------------------------------------------ #
     #  编码方法：失败时 raise AudioProcessingError                         #
