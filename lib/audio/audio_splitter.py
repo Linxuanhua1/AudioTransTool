@@ -12,7 +12,7 @@ class Splitter:
     def __init__(self, file_p: Path, p_man: PathManager, config: dict):
         self.out_p_man: PathManager = p_man
         self.file_p = file_p
-        self.is_del_single_track: bool = config['is_del_single_trk']
+        self.is_del_single_track: bool = config["transcode"]['is_del_single_trk']
 
     @staticmethod
     def extract_pcm_segment_frame(pcm_data, sample_rate, bit_depth, channels, start_frame, end_frame):
@@ -32,7 +32,7 @@ class Splitter:
         tracks = CueParser.paser_cue_data(self.file_p.with_suffix('.cue'))
         stream = probe(self.file_p)
 
-        sample_rate, channels, bps = stream['SampleRate'], stream['NumChannels'], stream['SampleSize']
+        sample_rate, channels, bps = stream['SampleRate'], stream['Channels'], stream['BitsPerSample']
         logger.debug(f"正在将{self.file_p}转换为pcm数据缓存到内存中")
 
         flac_bytes = self.file_p.read_bytes()
@@ -52,9 +52,8 @@ class Splitter:
             end_frame = tracks[i + 1]['INDEX01'] if i < len(tracks) - 1 else None
             raw = Splitter.extract_pcm_segment_frame(pcm_data, sample_rate, bps, channels, start_frame,
                                                      end_frame)
-            logger.info('正在将曲目转换成flac')
 
-            filename = f"{track['TRACKNUMBER']} - {track['TITLE']}.flac"
+            filename = f"{track['TRACKNUMBER']} - {track.get('TITLE', track['TRACKNUMBER'])}.flac"
             filename = PathManager.safe_filename(filename)
             desired_out_p = Path(self.file_p.parent / filename)
             out_p = self.out_p_man.get_output_path(desired_out_p)
@@ -86,7 +85,7 @@ class CueParser:
 
     @classmethod
     def paser_cue_data(cls, file_p):
-        raw = open("file_p", "rb").read()
+        raw = open(file_p, "rb").read()
         result = chardet.detect(raw)
 
         with open(file_p, encoding=result['encoding']) as f:
