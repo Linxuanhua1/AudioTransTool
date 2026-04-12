@@ -3,18 +3,19 @@ from collections import Counter
 from jinja2 import Template
 
 from lib.constants import IMAGE_FORMATS, AUDIO_FORMAT_ORDER, ALLOWED_READ_AUDIO_FORMAT
-from lib.organizer.folder_scanner.scan_models import ScanResult, FolderStatus
-from lib.organizer.folder_scanner.audio_info import AudioSource, AudioQuality
+from .scan_models import ScanResult, FolderStatus
+from .audio_info import AudioSource, AudioQuality
 
 
 class FolderScanner:
     @staticmethod
-    def analyze(folder_p: Path, threshold: int, folder_content_template: Template) -> ScanResult:
+    def analyze(folder_p: Path, threshold: int,
+                folder_content_template: Template, standard_tag: dict[str, set]) -> ScanResult:
         """扫描文件夹并返回完整的 ScanResult。"""
         status, audio_files = FolderScanner.scan(folder_p, threshold)
         quality_str, found_formats = AudioQuality.get_all_audio_qualities(audio_files)
         suffix = FolderScanner.build_suffix(found_formats, status, folder_content_template)
-        src, score = AudioSource.detect_source(status, folder_p)
+        src, score = AudioSource.detect_source(status, folder_p, standard_tag)
         return ScanResult(folder_content=suffix, source=src, score=score, quality=quality_str,
                           found_formats=found_formats, status=status)
 

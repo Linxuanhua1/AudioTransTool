@@ -1,4 +1,4 @@
-import concurrent.futures, pyvips, logging
+import concurrent.futures, pyvips, logging, psutil
 from pathlib import Path
 from operator import methodcaller
 from typing import Any, Callable
@@ -6,9 +6,8 @@ from tqdm import tqdm
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from lib.audio.audio_handler import AudioEncodeFormat
-from lib.constants import AUDIO_HANDLERS, IMAGE_HANDLERS
-from lib.audio.audio_splitter import Splitter
+from lib.constants import AUDIO_HANDLERS, IMAGE_HANDLERS, DIRECT_SPLIT_FORMATS, AUDIO_EXT2CLI_CMD
+from lib.audio import Splitter, AudioEncodeFormat
 from lib.common import PathManager, MediaProbe, AudioFormatChecker, ImageFormatChecker
 
 
@@ -36,7 +35,7 @@ class TaskManager:
     """统一任务管理器"""
     def __init__(self, config: dict[str, Any], path_manager: PathManager):
         self.config = config
-        self.worker_count = 1
+        self.max_threads = 1 if config['transcode']['is_hdd'] else psutil.cpu_count(logical=False)
         self.path_manager = path_manager
 
         # 注册所有任务类型
@@ -52,7 +51,7 @@ class TaskManager:
                 task_type=TaskType.AUDIO_SPLIT,
                 name="音频分轨",
                 description="音频分轨中",
-                call_func=methodcaller("split_flac_with_cue"),
+                call_func=methodcaller("split_with_cue"),
                 enabled_key="act_cue_splitting"
             ),
 
@@ -82,7 +81,8 @@ class TaskManager:
         tasks = self._collect_tasks(folder_p, task_type)
         if tasks:
             logger.info(f'找到 {len(tasks)} 个{task_config.name}任务')
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.config['transcode']['max_threads']) as executor:
+            max_threads = self.max_threads if task_config.task_type != TaskType.IMAGE_CONVERT else psutil.cpu_count(logical=False)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
                 list(tqdm(
                     executor.map(task_config.call_func, tasks),
                     total=len(tasks),
@@ -106,9 +106,24 @@ class TaskManager:
         # 1. 收集所有匹配扩展名的文件
         candidates: list[Path] = []
         for p in folder_p.rglob("*"):
+            if not p.is_file():
+                continue
+
             ext = p.suffix.lower()
-            if ext in AUDIO_HANDLERS:
-                candidates.append(p)
+
+            if ext not in AUDIO_HANDLERS:
+                continue
+
+            if p.stat().st_size == 0:
+                logger.error(f"{p}为空")
+                continue
+
+            if self.config["transcode"]["act_cue_splitting"] and ext in DIRECT_SPLIT_FORMATS:
+                cue_path = p.with_suffix('.cue')
+                if cue_path.exists():
+                    continue
+
+            candidates.append(p)
 
         if not candidates:
             return []
@@ -138,10 +153,17 @@ class TaskManager:
         # 1. 收集所有匹配扩展名的文件（排除 cover 文件）
         candidates: list[Path] = []
         for p in folder_p.rglob("*"):
+            if not p.is_file():
+                continue
+
             ext = p.suffix.lower()
             stem = p.stem
 
             if ext not in IMAGE_HANDLERS:
+                continue
+
+            if p.stat().st_size == 0:
+                logger.error(f"{p}为空")
                 continue
 
             # 跳过 cover 文件（保持原有逻辑）
@@ -185,13 +207,49 @@ class TaskManager:
         return tasks
 
     def _collect_split_tasks(self, folder_p: Path) -> list:
-        tasks = []
+        # 1. 收集所有匹配扩展名的文件
+        candidates: list[Path] = []
         for p in folder_p.rglob("*"):
+            if not p.is_file():
+                continue
+
             ext = p.suffix.lower()
-            if ext == '.flac':
+            if ext not in DIRECT_SPLIT_FORMATS:
+                continue
+
+            if p.stat().st_size == 0:
+                logger.error(f"{p}为空")
+                continue
+
+            if self.config["transcode"]["act_cue_splitting"]:
                 cue_path = p.with_suffix('.cue')
                 if cue_path.exists():
-                    tasks.append(Splitter(p, self.path_manager, self.config))
+                    candidates.append(p)
+
+        if not candidates:
+            return []
+
+        # 2. 批量 probe
+        metadata_map = self._batch_probe(candidates)
+
+        # 3. 用 FormatChecker 过滤并创建 handler
+        tasks = []
+        for file_p in candidates:
+            ext = file_p.suffix.lower()
+            metadata = metadata_map.get(file_p)
+
+            if ext == ".flac":
+                encode_format = AudioEncodeFormat.FLAC
+            else:
+                encode_format = AudioFormatChecker.check(ext, metadata, file_p, self.config)
+
+            if encode_format is not AudioEncodeFormat.FLAC:
+                continue
+
+            cmd = AUDIO_EXT2CLI_CMD.get(ext, None)
+            logger.debug(f'添加{file_p}到音频分轨队列中')
+            tasks.append(Splitter(file_p, self.path_manager, self.config, cmd))
+
         return tasks
 
     @staticmethod

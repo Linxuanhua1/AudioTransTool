@@ -2,16 +2,18 @@ content = """[transcode]
 # =========================================================================== #
 # 转码 配置
 # =========================================================================== #
-act_audio_trans = true                   # 是否开启音频转码
-act_cue_splitting = true                 # 是否开启分轨功能，默认为true
-act_img_transc = true                    # 是否开启照片转码，默认为true，转换所有支持格式到jxl
-is_del_single_trk = true                 # 分轨时是否删除原来的整轨和cue，默认为true
-is_del_src_audio = true                  # 是否删除转码前的音频，默认为true
-is_en_flac0_compress = false             # 是否要压缩无压缩的flac（比如mora的音频）
-is_en_flt_compress = true                # 是否开启浮点音频压缩（常见于一些asmr和e-onkyo音频）
-is_en_dsd_compress = true                # 是否开启dsd压缩
-is_del_src_img = true                    # 是否删除转码前的图片，默认为true
-max_threads = 8                          # 同时转码的个数，建议取cpu核心数，多了容易卡
+act_audio_trans = false                  # 是否开启音频转码，默认为false
+act_cue_splitting = false                # 是否开启分轨功能，默认为false
+act_img_transc = false                   # 是否开启照片转码，默认为false，转换所有支持格式到jxl
+is_del_single_trk = false                # 分轨时是否删除原来的整轨和cue，默认为false
+is_del_cue = false                       # 是否删除cue文件，默认为false
+is_del_src_audio = false                 # 是否删除转码前的音频，默认为false
+is_en_flac0_compress = false             # 是否要压缩无压缩的flac（比如mora的音频），默认为false
+is_en_flt_compress = false               # 是否开启浮点音频压缩（常见于一些asmr和e-onkyo音频），默认为false
+is_en_dsd_compress = false               # 是否开启dsd压缩，默认为false
+is_del_src_img = false                   # 是否删除转码前的图片，默认为false
+is_hdd = true                            # 存储介质是否为hdd，若为hdd多线程的线程数将设置为1，若为ssd则多线程数量为cpu核心数
+                                          （仅在音频处理的时候，因为音频处理的速度瓶颈在硬盘，图片压缩的速度瓶颈在cpu）
 
 
 # =========================================================================== #

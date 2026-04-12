@@ -1,19 +1,20 @@
-import subprocess, chardet, logging
+import subprocess, chardet, logging, struct
 from pathlib import Path
 from mutagen.flac import FLAC
 from typing import Any
 from lib.common import PathManager
-from lib.common.probe import MediaProbe
 
 
 logger = logging.getLogger(__name__)
 
 
 class Splitter:
-    def __init__(self, file_p: Path, p_man: PathManager, config: dict):
+    def __init__(self, file_p: Path, p_man: PathManager, config: dict, cmd: str):
         self.out_p_man: PathManager = p_man
         self.file_p = file_p
+        self.cmd: str = cmd.format(file_p=self.file_p)
         self.is_del_single_track: bool = config["transcode"]['is_del_single_trk']
+        self.is_del_cue: bool = config["transcode"]['is_del_cue']
 
     @staticmethod
     def extract_pcm_segment_frame(pcm_data, sample_rate, bit_depth, channels, start_frame, end_frame):
@@ -28,54 +29,78 @@ class Splitter:
         else:
             return pcm_data[start_byte:]
 
-    def split_flac_with_cue(self):
-        logger.debug(f"正在分轨{self.file_p}")
-        tracks = CueParser.paser_cue_data(self.file_p.with_suffix('.cue'))
-        stream = MediaProbe.probe(self.file_p)[0]
-
-        sample_rate, channels, bps = stream['SampleRate'], stream['Channels'], stream['BitsPerSample']
-        logger.debug(f"正在将{self.file_p}转换为pcm数据缓存到内存中")
-
-        flac_bytes = self.file_p.read_bytes()
+    def _decode_to_pcm(self) -> bytes | None:
+        """将音频文件解码为原始PCM数据"""
         try:
-            result = subprocess.run(['flac.exe', '-d', '--stdout', "-"], input=flac_bytes,
-                                            capture_output=True, check=True)
+            if self.file_p.suffix == '.flac':
+                file_bytes = self.file_p.read_bytes()
+                result = subprocess.run(['flac.exe', '-d', '--stdout', '-'], input=file_bytes,
+                                        capture_output=True, check=True)
+            else:
+                result = subprocess.run(self.cmd, capture_output=True, check=True)
         except subprocess.CalledProcessError as e:
             logger.error(e.stderr.decode())
+            return None
+
+        return result.stdout  # 跳过wav头文件
+
+    def split_with_cue(self):
+        logger.debug(f"正在分轨{self.file_p}")
+        tracks = CueParser.paser_cue_data(self.file_p.with_suffix('.cue'))
+
+        logger.debug(f"正在将{self.file_p}转换为pcm数据缓存到内存中")
+
+        wav_data = self._decode_to_pcm() if self.cmd else self.file_p.read_bytes()
+
+        channels = struct.unpack("<H", wav_data[22:24])[0]
+        sample_rate = struct.unpack("<I", wav_data[24:28])[0]
+        bps = struct.unpack("<H", wav_data[34:36])[0]
+
+        pcm_data = wav_data[44:]
+
+        if pcm_data is None:
             logger.error(f"未能成功分轨{self.file_p}")
             return
-        pcm_data: bytes = result.stdout[44:]  # 跳过wav头文件
         logger.debug(f"成功将{self.file_p}转换音频为pcm数据")
 
-        for i, track in enumerate(tracks):
-            logger.debug(f'正在分割第{i+1}首曲目，曲目名为{track.get("TITLE")}')
-            start_frame = track['INDEX01']
-            end_frame = tracks[i + 1]['INDEX01'] if i < len(tracks) - 1 else None
-            raw = Splitter.extract_pcm_segment_frame(pcm_data, sample_rate, bps, channels, start_frame,
-                                                     end_frame)
+        all_out_ps: list[Path] = []
 
-            filename = f"{track['TRACKNUMBER']} - {track.get('TITLE', track['TRACKNUMBER'])}.flac"
-            filename = PathManager.safe_filename(filename)
-            desired_out_p = Path(self.file_p.parent / filename)
-            out_p = self.out_p_man.get_output_path(desired_out_p)
+        try:
+            for i, track in enumerate(tracks):
+                logger.debug(f'正在分割第{i + 1}首曲目，曲目名为{track.get("TITLE")}')
+                start_frame = track['INDEX01']
+                end_frame = tracks[i + 1]['INDEX01'] if i < len(tracks) - 1 else None
+                raw = Splitter.extract_pcm_segment_frame(pcm_data, sample_rate, bps, channels, start_frame,
+                                                         end_frame)
 
-            cmd = ['flac', "--force-raw-format", "--sign=signed", f"--endian=little",
-                   f'--channels={channels}', f'--sample-rate={sample_rate}', f'--bps={bps}',
-                   '-', '--best', '--threads=16', '-o', out_p]
-            subprocess.run(cmd, check=True, capture_output=True, input=raw)
-            logger.debug(f'成功将{self.file_p}的第{i+1}轨转换为flac')
+                filename = f"{track['TRACKNUMBER']} - {track.get('TITLE', track['TRACKNUMBER'])}.flac"
+                filename = PathManager.safe_filename(filename)
+                desired_out_p = Path(self.file_p.parent / filename)
+                out_p: Path = self.out_p_man.get_output_path(desired_out_p)
+                all_out_ps.append(out_p)
+                cmd = ['flac', "--force-raw-format", "--sign=signed", f"--endian=little",
+                       f'--channels={channels}', f'--sample-rate={sample_rate}', f'--bps={bps}',
+                       '-', '--best', '--threads=16', '-o', out_p]
+                subprocess.run(cmd, check=True, capture_output=True, input=raw)
+                logger.debug(f'成功将{self.file_p}的第{i + 1}轨转换为flac')
 
-            split_audio_flac = FLAC(out_p)
-            for field, tag in track.items():
-                if field != 'INDEX01':
-                    split_audio_flac[field] = str(tag)
-            split_audio_flac.save()
-            logger.debug(f'成功将cuesheet的元数据写入第{i+1}轨音频')
+                split_audio_flac = FLAC(out_p)
+                for field, tag in track.items():
+                    if field != 'INDEX01':
+                        split_audio_flac[field] = str(tag)
+                split_audio_flac.save()
+                logger.debug(f'成功将cuesheet的元数据写入第{i + 1}轨音频')
+        except KeyboardInterrupt:
+            for p in all_out_ps:
+                p.unlink(missing_ok=True)
+                logger.error(f"用户手动停止分轨，已经删除未完成文件{p}")
 
         if self.is_del_single_track:
             self.file_p.unlink()
+            logger.debug(f'成功删除{self.file_p}')
+        if self.is_del_cue:
             self.file_p.with_suffix('.cue').unlink()
-            logger.debug(f'成功删除{self.file_p}和其cue文件')
+            logger.debug(f'成功删除{self.file_p.with_suffix(".cue")}')
         logger.info(f'{self.file_p}分轨成功')
 
 

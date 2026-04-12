@@ -59,12 +59,18 @@ class MediaProbe:
             result = subprocess.run(cmd, input=input_text, capture_output=True, text=True, check=True, encoding="utf-8")
             return json.loads(result.stdout)
         except subprocess.CalledProcessError as e:
-            output = f"{e.stdout}\n{e.stderr}"
-            if "Unknown file type" in output:
-                return json.loads(e.stdout)
-            logger.error(e.stderr)
-            logger.error(e.stdout)
-            return None
+            error_msg = []
+            for result in json.loads(e.stdout):
+                error = result.get("Error", None)
+                if error:
+                    error_msg.append(error)
+
+            for error in error_msg:
+                if error == "Unknown file type":
+                    logger.error(e.stdout)
+                    return None
+
+            return json.loads(e.stdout)
 
     @staticmethod
     def parse_wvunpack_output(text: str) -> dict:

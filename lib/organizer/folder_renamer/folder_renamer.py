@@ -72,14 +72,15 @@ class FolderRenamer:
         pending: list[tuple[Path, Path]] = []
         for folder_p in album_dirs:
             # 1. 从音频标签提取字段
-            tag_fields: dict[str, str] = FieldExtractor.extract_from_audio_tags(folder_p)
+            standard_tag: dict[str, set] = FieldExtractor.extract_from_audio_tags(folder_p)
             # 如果没有读取到有效的 date 和 album，跳过
-            if not (tag_fields.get("DATE") and tag_fields.get("ALBUM")):
+            if not (standard_tag.get("DATE") and standard_tag.get("ALBUM")):
                 print(f"跳过（未找到有效标签）: {folder_p.name}")
                 continue
             # 2. 扫描文件夹获取音频信息
-            scan_fields: dict[str, str] = FolderScanner.analyze(folder_p, self.booklet_threshold, self.folder_content_template).to_dict()
-            all_fields = tag_fields | scan_fields
+            scan_fields: dict[str, str] = FolderScanner.analyze(folder_p, self.booklet_threshold,
+                                                                self.folder_content_template, standard_tag).to_dict()
+            all_fields = standard_tag | scan_fields
             # 3. 生成新名称
             new_name = FieldExtractor.format_fields_to_name(all_fields, self.output_template)
             if not new_name:
@@ -104,7 +105,7 @@ class FolderRenamer:
             print(f"{old_p}重命名为{new_p}")
             renamed.append((old_p, new_p))
 
-        is_ack = input('是否确认重命名？(y/n)：').strip().lower()
+        is_ack = input('是否确认重命名？(y/n)：（回车为n）').strip().lower()
         if is_ack != "y":
             for old_p, new_p in renamed:
                 new_p.rename(old_p)

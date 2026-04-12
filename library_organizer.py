@@ -1,4 +1,5 @@
-import tomllib
+import tomllib, os
+os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.getcwd() + '/bin/'
 from typing import Callable
 from pathlib import Path
 
@@ -6,7 +7,7 @@ from lib.organizer import FolderRenamer, TagSeparator, RemoteFetcher, ImageExtra
 from lib.common import setup_logger, generate_config
 
 
-logger = setup_logger(__name__)
+logger = setup_logger()
 
 
 class Organizer:

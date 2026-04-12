@@ -16,6 +16,8 @@ ALLOWED_READ_AUDIO_FORMAT = [
 # 音频格式优先级映射（用于排序）
 AUDIO_FORMAT_ORDER = {ext: i for i, ext in enumerate(ALLOWED_READ_AUDIO_FORMAT)}
 
+# 可以直接解码为PCM进行分割的格式（无需经过转码流程）
+DIRECT_SPLIT_FORMATS = {'.wav', '.wv', '.aiff', '.aif', '.m4a', '.tak', '.tta', '.ape', ".flac"}
 
 # ============================================================================
 # 图片格式

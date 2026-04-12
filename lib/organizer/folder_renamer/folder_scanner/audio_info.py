@@ -230,13 +230,13 @@ class AudioInfoParse:
 
 class AudioSource:
     @staticmethod
-    def detect_source(status: FolderStatus, folder_p: Path) -> tuple[str, str]:
+    def detect_source(status: FolderStatus, folder_p: Path, standard_tag: dict[str, set]) -> tuple[str, str]:
         """
         检测音频来源，统一返回 (source, score)。
         有日志时 source=ripper, score=抓取评分；无日志时 score=""。
         """
         if status.has_log:
-            log_p = next(folder_p.glob("*.log"))
+            log_p = next(folder_p.rglob("*.log"))
             ripper, score = AudioSource._probe_log(log_p)
             return ripper, score
         else:
@@ -246,22 +246,27 @@ class AudioSource:
                     return "WEB", ""
                 if ext not in (".wav", ".flac", ".dsf"):
                     continue
-                bundle = AudioTagReader.read(Path(p))
-                if bundle is None:
+
+                if standard_tag is None:
                     return "WEB", ""
 
                 # Vorbis / ID3 共用字段（AudioTagReader 已统一填充）
-                if bundle.qbz_tid:
+                if standard_tag.get("QBZ_TID", None):
                     return "Qobuz", ""
-                if "tidal" in bundle.url.lower():
-                    return "Tidal", ""
-                if "amazon" in bundle.merchant.lower():
-                    return "Amazon", ""
+                url = standard_tag.get("URL", None)
+                if url:
+                    url = next(iter(standard_tag.get("URL", None))).lower()
+                    if "tidal" in url:
+                        return "Tidal", ""
+                    elif "amazon" in url:
+                        return "Amazon", ""
 
-                comment_lower = bundle.comment.lower()
-                for key, value in COMMENT_SOURCE_MAP.items():
-                    if key in comment_lower:
-                        return value, ""
+                comment = standard_tag.get("COMMENT", None)
+                if comment:
+                    comment = next(iter(comment)).lower()
+                    for key, value in COMMENT_SOURCE_MAP.items():
+                        if key in comment:
+                            return value, ""
 
                 if ext == ".dsf":
                     return "ISO转DSF", ""
