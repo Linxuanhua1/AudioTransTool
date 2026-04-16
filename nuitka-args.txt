@@ -1,1 +1,1 @@
-python -m nuitka --follow-imports --standalone --include-package=chardet .\transcode.py
+python -m nuitka --follow-imports --standalone --include-package=chardet .\musicbox.py
