@@ -1,0 +1,1 @@
+from lib.services.media_ops.remote_fetcher.metadb.vgm.fetcher import VgmFetcher as Vgm

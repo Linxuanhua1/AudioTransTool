@@ -1,0 +1,561 @@
+from mutagen.id3 import (
+    TALB, TBPM, TCOM, TCON, TCOP, TCMP, TDEN, TDES, TKWD, TCAT,
+    MVNM, MVIN, GRP1, TDOR, TDLY, TDRC, TDRL, TDTG, TENC, TEXT, TFLT,
+    TGID, TIT1, TIT2, TIT3, TKEY, TLAN, TLEN, TMED, TMOO, TOAL, TOFN,
+    TOLY, TOPE, TOWN, TPE1, TPE2, TPE3, TPE4, TPRO, TPUB,
+    TRSN, TRSO, TSO2, TSOA, TSOC, TSOP, TSOT, TSRC, TSSE, TSST,
+    WCOM, WCOP, WFED, WOAF, WOAR, WOAS, WORS, WPAY, WPUB,
+    TIPL, TMCL, IPLS, TORY,
+)
+from mutagen.mp3 import MP3
+from mutagen.trueaudio import TrueAudio
+from mutagen.wave import WAVE
+from mutagen.aiff import AIFF
+from mutagen.dsf import DSF
+from mutagen.flac import FLAC
+from mutagen.ogg import OggFileType
+from mutagen.oggvorbis import OggVorbis
+from mutagen.aac import AAC
+from mutagen.monkeysaudio import MonkeysAudio
+from mutagen.wavpack import WavPack
+from mutagen.tak import TAK
+from mutagen.mp4 import MP4
+from mutagen.asf import ASF
+
+from lib.services.tags import ImageType
+
+
+# ============================================================================
+# Mutagen 文件类型分组
+# ============================================================================
+
+ID3_TYPES = (MP3, TrueAudio, WAVE, AIFF, DSF)
+VORBIS_TYPES = (FLAC, OggFileType, OggVorbis)
+MP4_TYPES = (AAC, MP4)
+APEV2_TYPES = (MonkeysAudio, WavPack, TAK)
+ASF_TYPES = ASF
+
+
+# ============================================================================
+# 延迟导入机制 - 避免循环依赖
+# ============================================================================
+
+# 缓存已构建的映射，避免重复导入
+_TYPE_TO_READER_CACHE = None
+_TYPE_TO_WRITER_CACHE = None
+_TAG_GROUPS_CACHE = None
+
+
+def _get_type_to_reader():
+    """延迟构建 TYPE_TO_READER 映射，避免循环导入"""
+    global _TYPE_TO_READER_CACHE
+    if _TYPE_TO_READER_CACHE is None:
+        # 在函数内部导入，避免模块加载时的循环依赖
+        from lib.services.tags.id3 import ID3Reader
+        from lib.services.tags.mp4 import MP4Reader
+        from lib.services.tags.apev2 import APEv2Reader
+        from lib.services.tags.vorbis import VorbisReader
+        from lib.services.tags.asf import AsfReader
+        
+        _TYPE_TO_READER_CACHE = {
+            **{t: ID3Reader for t in ID3_TYPES},
+            **{t: VorbisReader for t in VORBIS_TYPES},
+            **{t: MP4Reader for t in MP4_TYPES},
+            **{t: APEv2Reader for t in APEV2_TYPES},
+            ASF: AsfReader
+        }
+    return _TYPE_TO_READER_CACHE
+
+
+def _get_type_to_writer():
+    """延迟构建 TYPE_TO_WRITER 映射，避免循环导入"""
+    global _TYPE_TO_WRITER_CACHE
+    if _TYPE_TO_WRITER_CACHE is None:
+        from lib.services.tags.id3 import ID3Writer
+        from lib.services.tags.mp4 import MP4Writer
+        from lib.services.tags.apev2 import APEv2Writer
+        from lib.services.tags.vorbis import VorbisWriter
+        
+        _TYPE_TO_WRITER_CACHE = {
+            **{t: ID3Writer for t in ID3_TYPES},
+            **{t: VorbisWriter for t in VORBIS_TYPES},
+            **{t: MP4Writer for t in MP4_TYPES},
+            **{t: APEv2Writer for t in APEV2_TYPES},
+        }
+    return _TYPE_TO_WRITER_CACHE
+
+
+def _get_tag_groups():
+    """延迟构建 TAG_GROUPS 映射，避免循环导入"""
+    global _TAG_GROUPS_CACHE
+    if _TAG_GROUPS_CACHE is None:
+        from lib.services.tags.id3 import ID3Reader, ID3Writer
+        from lib.services.tags.mp4 import MP4Reader, MP4Writer
+        from lib.services.tags.apev2 import APEv2Reader, APEv2Writer
+        from lib.services.tags.vorbis import VorbisReader, VorbisWriter
+        
+        _TAG_GROUPS_CACHE = [
+            (ID3Reader, ID3Writer),
+            (VorbisReader, VorbisWriter),
+            (MP4Reader, MP4Writer),
+            (APEv2Reader, APEv2Writer),
+        ]
+    return _TAG_GROUPS_CACHE
+
+
+# ============================================================================
+# 模块级延迟导入接口（Python 3.7+）
+# ============================================================================
+
+def __getattr__(name):
+    """
+    模块级属性访问器，实现延迟导入
+    使用方式：from lib.constants import TYPE_TO_READER  # 自动调用延迟导入
+    """
+    if name == 'TYPE_TO_READER':
+        return _get_type_to_reader()
+    elif name == 'TYPE_TO_WRITER':
+        return _get_type_to_writer()
+    elif name == 'TAG_GROUPS':
+        return _get_tag_groups()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
+
+# ============================================================================
+# ID3 相关映射
+# ============================================================================
+
+# ID3 不支持的帧
+ID3_NOT_SUPPORTED = [
+    'AENC', 'ASPI', 'COMR', 'ENCR', 'EQU2', "ETCO", "GEOB",
+    'GRID', 'LINK', "MCDI", 'MLLT', "OWNE", "PRIV", 'PCNT',
+    "POPM", 'POSS', 'RBUF', "RVA2", 'RVRB', 'SEEK', 'SIGN',
+    'SYTC', "ATXT", 'CHAP', 'CTOC', 'USER', 'RVAD'
+]
+
+# ID3V2.3里TYER是年份，TDAT是几月几日，TRDA才是写完整日期的
+ID3_TO_STANDARD = {
+    'TALB': 'ALBUM',
+    'TBPM': 'BPM',
+    'TCOM': 'COMPOSER',
+    'TCON': 'GENRE',
+    'TCOP': 'COPYRIGHT',
+    'TCMP': 'COMPILATION',
+    'TDAT': 'DATE',
+    'TDEN': 'ENCODINGTIME',
+    'TDES': 'PODCASTDESC',
+    'TKWD': 'PODCASTKEYWORDS',
+    'TCAT': 'PODCASTCATEGORY',
+    'MVNM': 'ITUNESMOVEMENTNAME',
+    "MVIN": "ITUNESMOVEMENTNUMBER",
+    'GRP1': 'GROUPING',
+    'TDOR': 'ORIGINALDATE',
+    "TDLY": "AUDIODELAY",
+    'TDRC': 'DATE',
+    'TDRL': 'RELEASETIME',
+    'TDTG': 'TAGGINGTIME',
+    'TENC': 'ENCODEDBY',
+    'TEXT': 'LYRICIST',
+    'TFLT': 'FILETYPE',
+    'TGID': 'PODCASTID',
+    "TIME": "RECORDINGTIME",
+    'TIT1': 'CONTENTGROUP',
+    'TIT2': 'TITLE',
+    'TIT3': 'SUBTITLE',
+    'TKEY': 'INITIALKEY',
+    'TLAN': 'LANGUAGE',
+    'TLEN': 'LENGTH',
+    'TMED': 'MEDIATYPE',
+    'TMOO': 'MOOD',
+    'TOAL': 'ORIGINALALBUM',
+    'TOFN': 'ORIGINALFILENAME',
+    'TOLY': 'ORIGLYRICIST',
+    'TOPE': 'ORIGARTIST',
+    "TORY": "ORIGINALDATE",
+    'TOWN': 'FILEOWNER',
+    'TPE1': 'ARTIST',
+    'TPE2': 'ALBUMARTIST',
+    'TPE3': 'CONDUCTOR',
+    'TPE4': 'MIXARTIST',
+    'TPOS': ('DISCNUMBER', "TOTALDISCS"),
+    "TPRO": "PRODUCEDNOTICE",
+    'TPUB': 'PUBLISHER',
+    'TRCK': ('TRACKNUMBER', "TOTALTRACKS"),
+    "TRDA": "DATE",
+    'TRSN': 'NETRADIOSTATION',
+    'TRSO': 'NETRADIOOWNER',
+    'TSO2': 'ALBUMARTISTSORT',
+    'TSOA': 'ALBUMSORT',
+    'TSOC': 'COMPOSERSORT',
+    'TSOP': 'ARTISTSORT',
+    'TSOT': 'TITLESORT',
+    'TSRC': 'ISRC',
+    'TSSE': 'ENCODERSETTINGS',
+    'TSST': 'SETSUBTITLE',
+    'TYER': 'DATE',
+    'WCOM': 'WWWCOMMERCIALINFO',
+    'WCOP': 'WWWCOPYRIGHT',
+    'WFED': 'PODCASTURL',
+    'WOAF': 'WWWAUDIOFILE',
+    'WOAR': 'WWWARTIST',
+    'WOAS': 'WWWAUDIOSOURCE',
+    'WORS': 'WWWRADIOPAGE',
+    'WPAY': 'WWWPAYMENT',
+    'WPUB': 'WWWPUBLISHER',
+    'TIPL': 'INVOLVEDPEOPLE',
+    'TMCL': 'MUSICIANCREDITS',
+    'IPLS': 'INITIALKEY',
+    'USLT': 'LYRICS',
+    'SYLT': 'LYRICS',
+    'PCST': 'PODCAST',
+    "UFID:http://musicbrainz.org": 'MUSICBRAINZ_TRACKID'
+}
+
+STANDARD_TO_ID3: dict[str, str] = {
+    'ALBUM': 'TALB',
+    'ALBUMARTIST': 'TPE2',
+    'ALBUMARTISTSORT': 'TSO2',
+    'ALBUMSORT': 'TSOA',
+    'ARTIST': 'TPE1',
+    'ARTISTSORT': 'TSOP',
+    'AUDIODELAY': 'TDLY',
+    'BPM': 'TBPM',
+    'COMPILATION': 'TCMP',
+    'COMPOSER': 'TCOM',
+    'COMPOSERSORT': 'TSOC',
+    'CONDUCTOR': 'TPE3',
+    'CONTENTGROUP': 'TIT1',
+    'COPYRIGHT': 'TCOP',
+    'DATE': 'TDRC',
+    'ENCODEDBY': 'TENC',
+    'ENCODERSETTINGS': 'TSSE',
+    'ENCODINGTIME': 'TDEN',
+    'FILEOWNER': 'TOWN',
+    'FILETYPE': 'TFLT',
+    'GENRE': 'TCON',
+    'GROUPING': 'GRP1',
+    'INITIALKEY': 'IPLS',
+    'INVOLVEDPEOPLE': 'TIPL',
+    'ISRC': 'TSRC',
+    'ITUNESMOVEMENTNAME': 'MVNM',
+    'ITUNESMOVEMENTNUMBER': 'MVIN',
+    'LANGUAGE': 'TLAN',
+    'LENGTH': 'TLEN',
+    'LYRICIST': 'TEXT',
+    'LYRICS': 'SYLT',
+    'MEDIATYPE': 'TMED',
+    'MIXARTIST': 'TPE4',
+    'MOOD': 'TMOO',
+    'MUSICBRAINZ_TRACKID': 'UFID:http://musicbrainz.org',
+    'MUSICIANCREDITS': 'TMCL',
+    'NETRADIOOWNER': 'TRSO',
+    'NETRADIOSTATION': 'TRSN',
+    'ORIGARTIST': 'TOPE',
+    'ORIGINALALBUM': 'TOAL',
+    'ORIGINALDATE': 'TORY',
+    'ORIGINALFILENAME': 'TOFN',
+    'ORIGLYRICIST': 'TOLY',
+    'PODCAST': 'PCST',
+    'PODCASTCATEGORY': 'TCAT',
+    'PODCASTDESC': 'TDES',
+    'PODCASTID': 'TGID',
+    'PODCASTKEYWORDS': 'TKWD',
+    'PODCASTURL': 'WFED',
+    'PRODUCEDNOTICE': 'TPRO',
+    'PUBLISHER': 'TPUB',
+    'RECORDINGTIME': 'TIME',
+    'RELEASETIME': 'TDRL',
+    'SETSUBTITLE': 'TSST',
+    'SUBTITLE': 'TIT3',
+    'TAGGINGTIME': 'TDTG',
+    'TITLE': 'TIT2',
+    'TITLESORT': 'TSOT',
+    'WWWARTIST': 'WOAR',
+    'WWWAUDIOFILE': 'WOAF',
+    'WWWAUDIOSOURCE': 'WOAS',
+    'WWWCOMMERCIALINFO': 'WCOM',
+    'WWWCOPYRIGHT': 'WCOP',
+    'WWWPAYMENT': 'WPAY',
+    'WWWPUBLISHER': 'WPUB',
+    'WWWRADIOPAGE': 'WORS'
+}
+
+ID3_TUPLE_REVERSE: dict[str, tuple[str, int]] = {
+    'DISCNUMBER': ('disk', 0),
+    'TOTALDISCS': ('disk', 1),
+    'TOTALTRACKS': ('trkn', 1),
+    'TRACKNUMBER': ('trkn', 0)
+}
+
+ID3_FRAME_CLASSES: dict[str, type] = {
+    'TALB': TALB, 'TBPM': TBPM, 'TCOM': TCOM, 'TCON': TCON, 'TCOP': TCOP,
+    'TCMP': TCMP, 'TDEN': TDEN, 'TDES': TDES, 'TKWD': TKWD, "TORY": TORY,
+    'TCAT': TCAT, 'MVNM': MVNM, 'MVIN': MVIN, 'GRP1': GRP1, 'TDOR': TDOR,
+    'TDLY': TDLY, 'TDRC': TDRC, 'TDRL': TDRL, 'TDTG': TDTG, 'TENC': TENC,
+    'TEXT': TEXT, 'TFLT': TFLT, 'TGID': TGID, 'TIT1': TIT1, 'TIT2': TIT2,
+    'TIT3': TIT3, 'TKEY': TKEY, 'TLAN': TLAN, 'TLEN': TLEN, 'TMED': TMED,
+    'TMOO': TMOO, 'TOAL': TOAL, 'TOFN': TOFN, 'TOLY': TOLY, 'TOPE': TOPE,
+    'TOWN': TOWN, 'TPE1': TPE1, 'TPE2': TPE2, 'TPE3': TPE3, 'TPE4': TPE4,
+    'TPRO': TPRO, 'TPUB': TPUB, 'TRSN': TRSN, 'TRSO': TRSO, 'TSO2': TSO2,
+    'TSOA': TSOA, 'TSOC': TSOC, 'TSOP': TSOP, 'TSOT': TSOT, 'TSRC': TSRC,
+    'TSSE': TSSE, 'TSST': TSST,
+    'WCOM': WCOM, 'WCOP': WCOP, 'WFED': WFED, 'WOAF': WOAF, 'WOAR': WOAR,
+    'WOAS': WOAS, 'WORS': WORS, 'WPAY': WPAY, 'WPUB': WPUB,
+    'TIPL': TIPL, 'TMCL': TMCL, 'IPLS': IPLS,
+}
+
+
+# ============================================================================
+# APEv2 相关映射
+# ============================================================================
+
+APEV2_TO_STANDARD = {
+    "ALBUM ARTIST": "ALBUMARTIST",
+    "TRACK": "TRACKNUMBER",
+    "COVER ART (OTHER)": ImageType.Other,
+    "COVER ART (ICON)": ImageType.Icon,
+    "COVER ART (OTHER ICON)": ImageType.OtherIcon,
+    "COVER ART (FRONT)": ImageType.Front,
+    "COVER ART (BACK)": ImageType.Back,
+    "COVER ART (LEAFLET)": ImageType.Leaflet,
+    "COVER ART (MEDIA)": ImageType.Media,
+    "COVER ART (LEAD ARTIST)": ImageType.LeadArtist,
+    "COVER ART (ARTIST)": ImageType.Artist,
+    "COVER ART (CONDUCTOR)": ImageType.Conductor,
+    "COVER ART (BAND)": ImageType.Band,
+    "COVER ART (COMPOSER)": ImageType.Composer,
+    "COVER ART (LYRICIST)": ImageType.Lyricist,
+    "COVER ART (RECORDING LOCATION)": ImageType.RecordingLocation,
+    "COVER ART (DURING RECORDING)": ImageType.DuringRecording,
+    "COVER ART (DURING PERFORMANCE)": ImageType.DuringPerformance,
+    "COVER ART (VIDEO CAPTURE)": ImageType.ScreenCapture,
+    "COVER ART (FISH)": ImageType.Fish,
+    "COVER ART (ILLUSTRATION)": ImageType.Illustration,
+    "COVER ART (BAND LOGOTYPE)": ImageType.BandLogo,
+    "COVER ART (PUBLISHER LOGOTYPE)": ImageType.PublisherLogo,
+}
+
+STANDARD_TO_APEV2: dict[str, str] = {
+    'ALBUMARTIST': 'Album Artist',
+    'TRACKNUMBER': 'TRACK'
+}
+
+IMAGE_TYPE_TO_APE: dict[ImageType, str] = {
+    ImageType.Leaflet: 'Cover Art (Leaflet)',
+    ImageType.DuringRecording: 'Cover Art (During Recording)',
+    ImageType.DuringPerformance: 'Cover Art (During Performance)',
+    ImageType.ScreenCapture: 'Cover Art (Video Capture)',
+    ImageType.Band: 'Cover Art (Band)',
+    ImageType.Composer: 'Cover Art (Composer)',
+    ImageType.Front: 'Cover Art (Front)',
+    ImageType.Back: 'Cover Art (Back)',
+    ImageType.Media: 'Cover Art (Media)',
+    ImageType.LeadArtist: 'Cover Art (Lead Artist)',
+    ImageType.Fish: 'Cover Art (Fish)',
+    ImageType.Illustration: 'Cover Art (Illustration)',
+    ImageType.RecordingLocation: 'Cover Art (Recording Location)',
+    ImageType.Lyricist: 'Cover Art (Lyricist)',
+    ImageType.Artist: 'Cover Art (Artist)',
+    ImageType.Conductor: 'Cover Art (Conductor)',
+    ImageType.BandLogo: 'Cover Art (Band Logotype)',
+    ImageType.PublisherLogo: 'Cover Art (Publisher Logotype)',
+    ImageType.Other: 'Cover Art (Other)',
+    ImageType.Icon: 'Cover Art (Icon)',
+    ImageType.OtherIcon: 'Cover Art (Other Icon)'
+}
+
+
+# ============================================================================
+# MP4 相关映射
+# ============================================================================
+
+MP4_TO_STANDARD = {
+    '©alb': 'ALBUM',
+    'aART': 'ALBUMARTIST',
+    'soaa': 'ALBUMARTISTSORT',
+    'soal': 'ALBUMSORT',
+    '©ART': 'ARTIST',
+    'soar': 'ARTISTSORT',
+    'tmpo': 'BPM',
+    '©cmt': 'COMMENT',
+    'cpil': 'COMPILATION',
+    '©wrt': 'COMPOSER',
+    'soco': 'COMPOSERSORT',
+    'cprt': 'COPYRIGHT',
+    '©prt': 'COPYRIGHT',
+    'desc': 'DESCRIPTION',
+    '©dir': 'DIRECTOR',
+    'disk': ('DISCNUMBER', 'TOTALDISCS'),
+    '©too': 'ENCODEDBY',
+    '©gen': 'GENRE',
+    '©grp': 'GROUPING',
+    'apID': 'ITUNESACCOUNT',
+    'rtng': 'ITUNESADVISORY',
+    'plID': 'ITUNESALBUMID',
+    'atID': 'ITUNESARTISTID',
+    'cnID': 'ITUNESCATALOGID',
+    'cmID': 'ITUNESCOMPOSERID',
+    'sfID': 'ITUNESCOUNTRYID',
+    'pgap': 'ITUNESGAPLESS',
+    'geID': 'ITUNESGENREID',
+    'hdvd': 'ITUNESHDVIDEO',
+    'stik': 'ITUNESMEDIATYPE',
+    'ownr': 'ITUNESOWNER',
+    'purd': 'ITUNESPURCHASEDATE',
+    '©mvi': 'MOVEMENT',
+    '©mvn': 'MOVEMENTNAME',
+    '©mvc': 'MOVEMENTTOTAL',
+    '©nrt': 'NARRATOR',
+    'pcst': 'PODCAST',
+    'catg': 'PODCASTCATEGORY',
+    'ldes': 'PODCASTDESC',
+    'egid': 'PODCASTID',
+    'keyw': 'PODCASTKEYWORDS',
+    'purl': 'PODCASTURL',
+    '©pub': 'PUBLISHER',
+    'rate': 'RATE',
+    'shwm': 'SHOWMOVEMENT',
+    'sdes': 'STOREDESCRIPTION',
+    '©nam': 'TITLE',
+    '©trk': 'TITLE',
+    'sonm': 'TITLESORT',
+    'trkn': ('TRACKNUMBER', 'TOTALTRACKS'),
+    'tves': 'TVEPISODE',
+    'tven': 'TVEPISODEID',
+    'tvnn': 'TVNETWORK',
+    'tvsn': 'TVSEASON',
+    'tvsh': 'TVSHOW',
+    'sosn': 'TVSHOWSORT',
+    '©lyr': 'LYRICS',
+    '©wrk': 'WORK',
+    '©day': 'DATE',
+    "akID": "APPLESTOREACCOUNTTYPE"
+}
+
+STANDARD_TO_MP4: dict[str, str] = {
+    'ALBUM': '©alb',
+    'ALBUMARTIST': 'aART',
+    'ALBUMARTISTSORT': 'soaa',
+    'ALBUMSORT': 'soal',
+    'APPLESTOREACCOUNTTYPE': 'akID',
+    'ARTIST': '©ART',
+    'ARTISTSORT': 'soar',
+    'BPM': 'tmpo',
+    'COMMENT': '©cmt',
+    'COMPILATION': 'cpil',
+    'COMPOSER': '©wrt',
+    'COMPOSERSORT': 'soco',
+    'COPYRIGHT': '©prt',
+    'DATE': '©day',
+    'DESCRIPTION': 'desc',
+    'DIRECTOR': '©dir',
+    'ENCODEDBY': '©too',
+    'GENRE': '©gen',
+    'GROUPING': '©grp',
+    'ITUNESACCOUNT': 'apID',
+    'ITUNESADVISORY': 'rtng',
+    'ITUNESALBUMID': 'plID',
+    'ITUNESARTISTID': 'atID',
+    'ITUNESCATALOGID': 'cnID',
+    'ITUNESCOMPOSERID': 'cmID',
+    'ITUNESCOUNTRYID': 'sfID',
+    'ITUNESGAPLESS': 'pgap',
+    'ITUNESGENREID': 'geID',
+    'ITUNESHDVIDEO': 'hdvd',
+    'ITUNESMEDIATYPE': 'stik',
+    'ITUNESOWNER': 'ownr',
+    'ITUNESPURCHASEDATE': 'purd',
+    'LYRICS': '©lyr',
+    'MOVEMENT': '©mvi',
+    'MOVEMENTNAME': '©mvn',
+    'MOVEMENTTOTAL': '©mvc',
+    'NARRATOR': '©nrt',
+    'PODCAST': 'pcst',
+    'PODCASTCATEGORY': 'catg',
+    'PODCASTDESC': 'ldes',
+    'PODCASTID': 'egid',
+    'PODCASTKEYWORDS': 'keyw',
+    'PODCASTURL': 'purl',
+    'PUBLISHER': '©pub',
+    'RATE': 'rate',
+    'SHOWMOVEMENT': 'shwm',
+    'STOREDESCRIPTION': 'sdes',
+    'TITLE': '©trk',
+    'TITLESORT': 'sonm',
+    'TVEPISODE': 'tves',
+    'TVEPISODEID': 'tven',
+    'TVNETWORK': 'tvnn',
+    'TVSEASON': 'tvsn',
+    'TVSHOW': 'tvsh',
+    'TVSHOWSORT': 'sosn',
+    'WORK': '©wrk'
+}
+
+# tuple value 单独注册（tracknumber/totaldiscs 反查到原始 key）
+MP4_TUPLE_REVERSE: dict[str, tuple[str, int]] = {
+    'DISCNUMBER': ('disk', 0),
+    'TOTALDISCS': ('disk', 1),
+    'TOTALTRACKS': ('trkn', 1),
+    'TRACKNUMBER': ('trkn', 0)
+}
+
+MP4_BOOL_FIELDS = {'cpil', 'pgap', 'hdvd', 'pcst', 'shwm'}
+MP4_INT_FIELDS = {
+    'tmpo', 'rtng', 'plID', 'atID', 'cnID', 'cmID', 'sfID',
+    'geID', 'stik', 'tves', 'tvsn', 'akID',
+}
+
+
+# ============================================================================
+# ASF/WMA 相关映射
+# ============================================================================
+
+ASF_TO_STANDARD = {
+    # Content Description Object 常见字段
+    "Title": "TITLE",
+    "Author": "ARTIST",
+    "Copyright": "COPYRIGHT",
+    "Description": "COMMENT",
+    "Rating": "RATING",
+
+    # Extended Content Description / Metadata 常见音频字段
+    "WM/AlbumTitle": "ALBUM",
+    "WM/AlbumArtist": "ALBUMARTIST",
+    "WM/Composer": "COMPOSER",
+    "WM/Conductor": "CONDUCTOR",
+    "WM/Writer": "ENCODEDBY",
+    "WM/EncodedBy": "ENCODEDBY",
+    "WM/EncodingSettings": "ENCODERSETTINGS",
+    "WM/Genre": "GENRE",
+    "WM/GenreID": "GENRE",
+    "WM/Year": "DATE",
+    "WM/TrackNumber": "TRACKNUMBER",
+    "WM/Track": "TRACKNUMBER",
+    "WM/PartOfSet": "DISCNUMBER",
+    "WM/BeatsPerMinute": "BPM",
+    "WM/InitialKey": "INITIALKEY",
+    "WM/Language": "LANGUAGE",
+    "WM/Lyrics": "LYRICS",
+    "WM/Mood": "MOOD",
+    "WM/Publisher": "PUBLISHER",
+    "WM/ISRC": "ISRC",
+
+    # 排序/扩展来源相关
+    "WM/OriginalAlbumTitle": "ORIGINALALBUM",
+    "WM/OriginalArtist": "ORIGARTIST",
+    "WM/OriginalFilename": "ORIGINALFILENAME",
+    "WM/OriginalLyricist": "ORIGLYRICIST",
+    "WM/OriginalReleaseTime": "ORIGINALDATE",
+    "WM/OriginalReleaseYear": "ORIGINALDATE",
+
+    # 分组/说明类
+    "WM/ContentGroupDescription": "CONTENTGROUP",
+    "WM/SubTitle": "SUBTITLE",
+
+    # URL 类
+    "WM/AuthorURL": "WWWARTIST",
+    "WM/AudioFileURL": "WWWAUDIOFILE",
+    "WM/AudioSourceURL": "WWWAUDIOSOURCE",
+    "CopyrightURL": "WWWCOPYRIGHT",
+    "WM/PromotionURL": "WWWPUBLISHER",
+}
