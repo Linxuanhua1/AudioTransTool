@@ -177,7 +177,7 @@ class M4aHandler(AudioHandler):
 
         with self._processing_guard(self.out_p):
             file_p = self.path_manager.to_norm_path(self.file_p)
-            self._flac_similar_compress(CMD_M4A2WAVBYTES.format(file_p=self.file_p))
+            self._flac_similar_compress(CMD_M4A2WAVBYTES.format(file_p=file_p))
 
 
 class WavepackHandler(AudioHandler):

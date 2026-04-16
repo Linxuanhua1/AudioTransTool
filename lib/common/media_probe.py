@@ -66,7 +66,7 @@ class MediaProbe:
                     error_msg.append(error)
 
             for error in error_msg:
-                if error == "Unknown file type":
+                if error != "Unknown file type":
                     logger.error(e.stdout)
                     return None
 

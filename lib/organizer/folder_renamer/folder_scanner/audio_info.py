@@ -4,7 +4,7 @@ import subprocess, json
 
 from lib.constants import DSD_RATE_MAP, COMMENT_SOURCE_MAP
 from .scan_models import FolderStatus
-from lib.common.probe import MediaProbe
+from lib.common.media_probe import MediaProbe
 
 
 class AudioQuality:
