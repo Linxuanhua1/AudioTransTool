@@ -90,9 +90,7 @@ class ImageExtractor:
         print(f"  已保存 {saved} 张图片")
 
         # 删除内嵌图片
-        removed = 0
-        if self._remove_embedded_pics(pending_del_pic):
-            removed += 1
+        removed = self._remove_embedded_pics(pending_del_pic)
         print(f"  已从 {removed} 个音频文件中移除内嵌图片")
 
     # ------------------------------------------------------------------ #

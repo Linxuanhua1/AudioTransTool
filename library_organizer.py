@@ -46,9 +46,9 @@ class Organizer:
     def _actions(self) -> list[tuple[str, Callable]]:
         return [
             ("根据音频标签重命名文件夹",                          self.renamer.rename_from_tag),
-            ("提取文件夹名重命名文件夹",                          self.renamer.rename_from_name),
+            ("提取文件夹名重命名文件夹（未压力测试）",              self.renamer.rename_from_name),
             ("将音频标签的图片提取到同目录，同时删除音频标签的图片",   self.extractor.extract_and_remove),
-            ("分割音频的自定义字段",                             self.separator.separate_tag),
+            ("分割音频的自定义字段（未压力测试）",                  self.separator.separate_tag),
             ("从 VGMdb 拉取数据并创建对应文件夹",                  self.fetcher.fetch_vgm_and_create_folder),
             # ("根据光盘编号从 MusicBrainz 拉取数据",               self.fetcher.fetch_from_musicbrainz),
         ]
