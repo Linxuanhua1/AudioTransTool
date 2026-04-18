@@ -242,10 +242,6 @@ class AudioSource:
         else:
             for p in folder_p.rglob("*"):
                 ext = p.suffix.lower()
-                if ext in (".wma", ".mp3", ".ogg", ".m4a"):
-                    return "WEB", ""
-                if ext not in (".wav", ".flac", ".dsf"):
-                    continue
 
                 if standard_tag is None:
                     return "WEB", ""
@@ -267,9 +263,14 @@ class AudioSource:
                     for key, value in COMMENT_SOURCE_MAP.items():
                         if key in comment:
                             return value, ""
-
+                source = standard_tag.get("SOURCE", None)
+                if source:
+                    return next(iter(source)), ""
                 if ext == ".dsf":
                     return "ISO转DSF", ""
+
+                if ext in (".wma", ".mp3", ".ogg", ".m4a"):
+                    return "WEB", ""
 
                 return "WEB", ""
 

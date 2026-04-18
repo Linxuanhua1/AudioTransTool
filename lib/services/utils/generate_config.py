@@ -95,7 +95,7 @@ folder_content_template = \"\"\"\\
 \"\"\"
 # 可选字段用 {% if var %}...{% endif %} 包裹，有值时渲染，无值时跳过
 # 可用字段: DATE, ALBUM, CATALOGNUMBER, ALBUMARTIST, SOURCE, QUALITY, FOLDER_CONTENT, SCORE (可选，仅日志抓取时有值)
-output_template = "[{{DATE}}][{{SOURCE}}][{{ALBUM}}][{{QUALITY}}][{{FOLDER_CONTENT}}]{% if SCORE %}[log{{SCORE}}%]{% endif %}"
+output_template = "[{{DATE}}][{{SOURCE}}][{{ALBUM}}][{{QUALITY}}][{{FOLDER_CONTENT}}]{% if CATALOGNUMBER %}[CATALOGNUMBER]{% endif %}{% if SCORE %}[log{{SCORE}}%]{% endif %}"
 
 # --- 从文件夹名提取编号的正则 (write_from_folder_name 使用) ---
 catno_extract_pattern = '\\[.*?\\] .*? \\[(.*?)\\]'

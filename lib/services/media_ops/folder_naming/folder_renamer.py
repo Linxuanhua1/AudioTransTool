@@ -106,7 +106,6 @@ class FolderRenamer:
                 logger.debug(f"目标路径{new_p}已存在，跳过重命名{old_p}", extra={"plain": True, "plain_to_file": True})
                 continue
             old_p.rename(new_p)
-            logger.info("\n", extra={"plain": True, "plain_to_file": True})
             logger.info(f"{old_p}\n重命名为\n{new_p}\n", extra={"plain": True, "plain_to_file": True})
             renamed.append((old_p, new_p))
 
