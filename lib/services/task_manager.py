@@ -11,7 +11,7 @@ from lib.services.audio import Splitter, AudioEncodeFormat
 from lib.services.utils import PathManager, MediaProbe, AudioFormatChecker, ImageFormatChecker
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("musicbox.services.task_manager")
 
 
 class TaskType(Enum):

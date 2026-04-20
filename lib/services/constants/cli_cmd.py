@@ -2,9 +2,9 @@
 CMD_WAVBYTES2FLAC = "flac - --best --threads=16 -o \"{out_p}\""
 
 CMD_PCMBYTES2FLAC = ("flac --force-raw-format --sign=signed --endian={endian} --channels={channels}"
-                     "--sample-rate={sample_rate} --bps={bps} - --best --threads=16 -o \"{out_p}\"")
+                     " --sample-rate={sample_rate} --bps={bps} - --best --threads=16 -o \"{out_p}\"")
 
-CMD_BYTES2WV = "wavpack --threads=12 -hhx6 - {out_p}"
+CMD_BYTES2WV = "wavpack --threads=12 -hhx6 - \"{out_p}\""
 
 CMD_TAK2WAVBYTES = 'Takc -d \"{file_p}\" -'
 

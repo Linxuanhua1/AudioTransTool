@@ -2,7 +2,7 @@ import json, subprocess, logging
 from pathlib import Path
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('musicbox.services.utils.media_probe')
 
 
 class MediaProbe:

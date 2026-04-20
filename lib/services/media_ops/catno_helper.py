@@ -1,5 +1,4 @@
 import re
-from typing import List
 
 
 # --------------------------------------------------------------------------- #
@@ -69,58 +68,3 @@ class CatNoHelper:
                 break
 
         return f"{prefix}-{start_str}~{suffix}"
-
-    # ------------------------------------------------------------------ #
-    # 日期格式化
-    # ------------------------------------------------------------------ #
-
-    @staticmethod
-    def normalize_date(orig_date: str) -> str:
-        """
-        将 6 位、8 位或已含点的日期统一为 YYYY.MM.DD 格式。
-
-        例：
-            "230415"  → "2023.04.15"
-            "20230415"→ "2023.04.15"
-            "2023.04.15" → "2023.04.15"（原样返回）
-        """
-        if "." in orig_date:
-            return orig_date
-        if len(orig_date) == 6:
-            prefix = "19" if int(orig_date[:2]) > 50 else "20"
-            return f"{prefix}{orig_date[:2]}.{orig_date[2:4]}.{orig_date[4:]}"
-        # 8 位
-        return f"{orig_date[:4]}.{orig_date[4:6]}.{orig_date[6:]}"
-
-    # ------------------------------------------------------------------ #
-    # 文本分割
-    # ------------------------------------------------------------------ #
-
-    @staticmethod
-    def separate_text(values: List[str]) -> List[str]:
-        """
-        当列表仅有单个值时，尝试按配置的分隔符拆分为多个值。
-        多值列表直接原样返回。
-        """
-        if len(values) != 1:
-            return values
-        pattern = "|".join(re.escape(sep) for sep in SEPARATORS)
-        return [v.strip() for v in re.split(pattern, values[0]) if v.strip()]
-
-    # ------------------------------------------------------------------ #
-    # 正则选择器（CLI 辅助）
-    # ------------------------------------------------------------------ #
-
-    @staticmethod
-    def choose_pattern(prompt_lines: List[str], patterns: dict) -> str:
-        """
-        交互式正则表达式选择器。
-        patterns 格式：{'1': r'...', '2': r'...'}，末尾自动追加"自定义"选项。
-        """
-        while True:
-            choice = input("\n".join(prompt_lines) + "\n请输入数字：")
-            if choice in patterns:
-                return patterns[choice]
-            if choice == str(len(patterns) + 1):
-                return input("请输入正则表达式：")
-            print("输入不正确，请重新输入")

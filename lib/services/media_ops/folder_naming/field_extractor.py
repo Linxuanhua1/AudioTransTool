@@ -9,6 +9,7 @@ from lib.services.constants import (
     ALLOWED_READ_AUDIO_FORMAT,
     TYPE_TO_READER,
 )
+from ..catno_helper import CatNoHelper
 
 
 logger = logging.getLogger("musicbox.services.media_ops.folder_naming.field_extractor")
@@ -34,7 +35,7 @@ class FieldExtractor:
         return fields
 
     @staticmethod
-    def extract_from_audio_tags(folder_path: Path) -> dict[str, set]:
+    def extract_from_audio_tags(folder_path: Path) -> dict[str, str]:
         """
         从音频文件标签中提取 date 和 album 字段。
 
@@ -50,17 +51,25 @@ class FieldExtractor:
 
             src_audio = mutagen.File(str(p))
             reader_cls = TYPE_TO_READER.get(type(src_audio))
-            standard_tag = reader_cls(p).internal
-            date_values: set[str] | None = standard_tag.get("DATE", set())
-            year_values: set[str] | None = standard_tag.get("YEAR", set())
-            time_values = [str(i) for i in (date_values | year_values)]
-            standard_tag = {k: next(iter(v)) for k, v in standard_tag.items() if v}
+            standard_tag: dict[str, set[str]] = reader_cls(p).internal
+            tmp_tag: dict[str, list[str]] = {k: list(v) for k, v in standard_tag.items() if v}
+
+            date_values: list[str] | None = tmp_tag.get("DATE", [])
+            year_values: list[str] | None = tmp_tag.get("YEAR", [])
+            time_values = [str(i) for i in (set(date_values) | set(year_values))]
             if time_values:
                 tmp_v = FieldExtractor.normalize_date(sorted(time_values, key=len, reverse=True)[0])
-                standard_tag["DATE"] = tmp_v
-                standard_tag.pop("YEAR", None)
+                tmp_tag["DATE"] = [tmp_v]
+                tmp_tag.pop("YEAR", None)
 
-            return standard_tag
+            catano = tmp_tag.get("CATALOGNUMBER", [])
+            if catano:
+                tmp_tag["CATALOGNUMBER"] = [CatNoHelper.fold(catano)]
+
+            # 保留第一个值作为有效检测值
+            out_tag = {k: v[0] for k, v in tmp_tag.items()}
+
+            return out_tag
 
     @staticmethod
     def format_fields_to_name(fields: dict[str, str], output_template: Template) -> Optional[str]:

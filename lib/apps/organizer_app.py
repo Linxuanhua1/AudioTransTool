@@ -1,5 +1,6 @@
 import logging
 from lib.services.media_ops import FolderRenamer, TagSeparator, RemoteFetcher, ImageExtractor
+from lib.services.utils import clear_screen
 
 
 logger = logging.getLogger("musicbox.organizer")
@@ -50,18 +51,20 @@ class OrganizerApp:
 
     def run(self) -> None:
         while True:
-            logger.info("\n请选择操作：", extra={"plain": True, "plain_to_file": True})
+            logger.info("\n请选择操作：", extra={"plain": True})
             for i, (name, _) in enumerate(self.actions, 1):
-                logger.info(f"  {i}. {name}", extra={"plain": True, "plain_to_file": True})
-            logger.info("  #. 返回上一级", extra={"plain": True, "plain_to_file": True})
+                logger.info(f"  {i}. {name}", extra={"plain": True})
+            logger.info("  #. 返回上一级", extra={"plain": True})
 
             choice = input("请输入数字：").strip()
             if choice == "#":
-                logger.info("返回主菜单", extra={"plain": True, "plain_to_file": True})
+                logger.info("返回主菜单", extra={"plain": True})
                 return
+
+            clear_screen()
 
             if choice.isdigit() and 1 <= int(choice) <= len(self.actions):
                 _, handler = self.actions[int(choice) - 1]
                 handler()
             else:
-                logger.info("输入不正确，请重新输入", extra={"plain": True, "plain_to_file": True})
+                logger.info("输入不正确，请重新输入", extra={"plain": True})

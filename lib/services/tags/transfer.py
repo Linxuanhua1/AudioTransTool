@@ -4,7 +4,7 @@ import mutagen, logging
 from . import MetaReader, MetaWriter, InternalTags
 from lib.services.constants import TYPE_TO_READER, TYPE_TO_WRITER, TAG_GROUPS
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("musicbox.services.tags.transfer")
 
 class TagsTransfer:
     # tag 格式分组，同组内直通
@@ -16,7 +16,7 @@ class TagsTransfer:
             raise ValueError(f"无法读取源文件: {input_p}")
         if dst_audio is None:
             raise ValueError(f"无法读取目标文件: {output_p}")
-        if type(src_audio) == "DSDIFF":
+        if type(src_audio).__name__ == "DSDIFF":
             logger.info(f"{input_p}是dff文件，没有元数据信息，跳过转移元数据")
             return
         reader_cls = TYPE_TO_READER.get(type(src_audio))

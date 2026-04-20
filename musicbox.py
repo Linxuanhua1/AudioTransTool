@@ -3,7 +3,7 @@ from pathlib import Path
 
 os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.getcwd() + "/bin/"
 
-from lib.services.utils import setup_logger, generate_config
+from lib.services.utils import setup_logger, generate_config, clear_screen
 from lib.apps import OrganizerApp, TranscodeApp
 
 logger = setup_logger("musicbox")
@@ -24,6 +24,7 @@ class MusicBoxApp:
             logger.info("  #. 退出程序", extra={"plain": True})
 
             choice = input("请输入数字：").strip()
+            clear_screen()
 
             if choice == "#":
                 logger.info("退出程序", extra={"plain": True})

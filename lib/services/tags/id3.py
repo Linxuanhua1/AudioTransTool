@@ -10,7 +10,7 @@ from lib.services.constants import ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_
 from .base import MetaReader, MetaWriter, InternalTags
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("musicbox.services.tags.id3")
 
 
 class ID3Writer(MetaWriter):

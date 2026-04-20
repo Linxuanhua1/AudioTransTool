@@ -3,3 +3,4 @@ from .log import setup_logger
 from .media_probe import MediaProbe
 from .path_manager import PathManager
 from .format_checker import AudioFormatChecker, ImageFormatChecker
+from .clear_screen import clear_screen

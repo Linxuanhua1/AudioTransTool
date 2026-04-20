@@ -230,7 +230,7 @@ class AudioInfoParse:
 
 class AudioSource:
     @staticmethod
-    def detect_source(status: FolderStatus, folder_p: Path, standard_tag: dict[str, set]) -> tuple[str, str]:
+    def detect_source(status: FolderStatus, folder_p: Path, standard_tag: dict[str, str]) -> tuple[str, str]:
         """
         检测音频来源，统一返回 (source, score)。
         有日志时 source=ripper, score=抓取评分；无日志时 score=""。
@@ -265,7 +265,7 @@ class AudioSource:
                             return value, ""
                 source = standard_tag.get("SOURCE", None)
                 if source:
-                    return next(iter(source)), ""
+                    return source, ""
                 if ext == ".dsf":
                     return "ISO转DSF", ""
 

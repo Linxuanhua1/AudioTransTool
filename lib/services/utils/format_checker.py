@@ -20,23 +20,7 @@ class AudioFormatChecker:
         if metadata is None:
             return AudioEncodeFormat.UNSUPPORTED
 
-        checkers = {
-            '.flac': AudioFormatChecker._check_flac,
-            '.m4a': AudioFormatChecker._check_m4a,
-            '.wv': AudioFormatChecker._check_wavepack,
-            '.wav': AudioFormatChecker._check_wav,
-            '.aiff': AudioFormatChecker._check_aiff,
-            '.aif': AudioFormatChecker._check_aiff,
-            '.aifc': AudioFormatChecker._check_aiff,
-            '.dsf': AudioFormatChecker._check_dsd,
-            '.dff': AudioFormatChecker._check_dsd,
-            # 这些格式始终转换为 FLAC
-            '.ape': AudioFormatChecker._always_flac,
-            '.tak': AudioFormatChecker._always_flac,
-            '.tta': AudioFormatChecker._always_flac,
-        }
-
-        checker = checkers.get(ext)
+        checker = audio_checkers.get(ext)
         if checker is None:
             return AudioEncodeFormat.UNSUPPORTED
         return checker(metadata, file_p, config)
@@ -118,7 +102,7 @@ class AudioFormatChecker:
         # dff: 需要检查是否是 DST 压缩
         dst = AudioFormatChecker._is_dff_dst(file_p)
         if dst:
-            logger.error(f"{file_p}是DST压缩的DFF，不支持直接转换")
+            logger.error(f"{file_p}是DST压缩的DFF，不支持直接转换，需要手动转换")
             return AudioEncodeFormat.UNSUPPORTED
         elif dst is None:
             logger.error(f"{file_p}不是合法的 DFF 文件")
@@ -178,18 +162,7 @@ class ImageFormatChecker:
         if metadata is None:
             return False
 
-        checkers = {
-            '.tif': ImageFormatChecker._check_tiff,
-            '.tiff': ImageFormatChecker._check_tiff,
-            '.jpg': ImageFormatChecker._check_jpg,
-            '.jpeg': ImageFormatChecker._check_jpg,
-            # 这些格式始终转换
-            '.png': ImageFormatChecker._always_true,
-            '.bmp': ImageFormatChecker._always_true,
-            '.webp': ImageFormatChecker._always_true,
-        }
-
-        checker = checkers.get(ext)
+        checker = image_checkers.get(ext)
         if checker is None:
             return False
         return checker(metadata, file_p)
@@ -224,3 +197,30 @@ class ImageFormatChecker:
             return True
         logger.error(f"{file_p} 不支持转换为 jxl（颜色分量数：{color_components}）")
         return False
+
+audio_checkers = {
+    '.flac': AudioFormatChecker._check_flac,
+    '.m4a': AudioFormatChecker._check_m4a,
+    '.wv': AudioFormatChecker._check_wavepack,
+    '.wav': AudioFormatChecker._check_wav,
+    '.aiff': AudioFormatChecker._check_aiff,
+    '.aif': AudioFormatChecker._check_aiff,
+    '.aifc': AudioFormatChecker._check_aiff,
+    '.dsf': AudioFormatChecker._check_dsd,
+    '.dff': AudioFormatChecker._check_dsd,
+    # 这些格式始终转换为 FLAC
+    '.ape': AudioFormatChecker._always_flac,
+    '.tak': AudioFormatChecker._always_flac,
+    '.tta': AudioFormatChecker._always_flac,
+}
+
+image_checkers = {
+    '.tif': ImageFormatChecker._check_tiff,
+    '.tiff': ImageFormatChecker._check_tiff,
+    '.jpg': ImageFormatChecker._check_jpg,
+    '.jpeg': ImageFormatChecker._check_jpg,
+    # 这些格式始终转换
+    '.png': ImageFormatChecker._always_true,
+    '.bmp': ImageFormatChecker._always_true,
+    '.webp': ImageFormatChecker._always_true,
+}

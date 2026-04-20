@@ -1,8 +1,6 @@
-import mutagen,logging
+import mutagen
 from abc import ABC, abstractmethod
 from pathlib import Path
-
-logger = logging.getLogger(__name__)
 
 InternalTags = dict[str, set]
 
