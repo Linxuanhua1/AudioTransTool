@@ -251,7 +251,7 @@ class AudioSource:
                     return "Qobuz", ""
                 url = standard_tag.get("URL", None)
                 if url:
-                    url = next(iter(standard_tag.get("URL", None))).lower()
+                    url = url.lower()
                     if "tidal" in url:
                         return "Tidal", ""
                     elif "amazon" in url:
@@ -259,7 +259,7 @@ class AudioSource:
 
                 comment = standard_tag.get("COMMENT", None)
                 if comment:
-                    comment = next(iter(comment)).lower()
+                    comment = comment.lower()
                     for key, value in COMMENT_SOURCE_MAP.items():
                         if key in comment:
                             return value, ""

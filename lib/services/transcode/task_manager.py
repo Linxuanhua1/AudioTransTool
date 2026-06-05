@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 from lib.services.constants import AUDIO_HANDLERS, IMAGE_HANDLERS, DIRECT_SPLIT_FORMATS, AUDIO_EXT2CLI_CMD
-from lib.services.audio import Splitter, AudioEncodeFormat
+from lib.services.transcode.audio import Splitter, AudioEncodeFormat
 from lib.services.utils import PathManager, MediaProbe, AudioFormatChecker, ImageFormatChecker
 
 

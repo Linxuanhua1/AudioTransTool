@@ -59,6 +59,7 @@ class OrganizerApp:
             choice = input("请输入数字：").strip()
             if choice == "#":
                 logger.info("返回主菜单", extra={"plain": True})
+                clear_screen()
                 return
 
             clear_screen()

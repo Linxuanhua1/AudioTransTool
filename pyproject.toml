@@ -11,7 +11,7 @@ dependencies = [
     "tqdm",
     "chardet",
     "mutagen",
-    "pyvips[binary]",
+    "pyvips",
     "jinja2",
     "psutil"
 ]

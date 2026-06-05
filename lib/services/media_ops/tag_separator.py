@@ -3,7 +3,7 @@ from typing import Any
 import mutagen, re, logging
 
 from lib.services.constants import ALLOWED_READ_AUDIO_FORMAT, TYPE_TO_READER, TYPE_TO_WRITER
-from lib.services.utils import PathManager
+from lib.services.utils import PathManager, clear_screen
 
 logger = logging.getLogger("musicbox.services.media_ops.tag_separator")
 
@@ -24,6 +24,7 @@ class TagSeparator:
             folder_p = PathManager.check_input_folder_path()
             if folder_p == "#":
                 logger.info("返回主菜单", extra={"plain": True})
+                clear_screen()
                 return
             self._process_directory(Path(folder_p))
 

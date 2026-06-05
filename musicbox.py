@@ -2,6 +2,7 @@ import os, tomllib
 from pathlib import Path
 
 os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.getcwd() + "/bin/"
+os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.getcwd() + "/bin/vips-dev-8.18/bin"
 
 from lib.services.utils import setup_logger, generate_config, clear_screen
 from lib.apps import OrganizerApp, TranscodeApp

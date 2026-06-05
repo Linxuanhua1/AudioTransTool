@@ -1,5 +1,6 @@
 import musicbrainzngs, logging
 
+from lib.services.utils import clear_screen
 from lib.services.media_ops.remote_fetcher.metadb import Vgm
 
 
@@ -99,11 +100,12 @@ class RemoteFetcher:
 
     def fetch_vgm_and_create_folder(self) -> None:
         """交互式循环：从 VGMdb 页面拉取数据并创建对应文件夹结构。"""
-        print("输入 VGMdb product URL，输入 # 返回主菜单")
-        print("支持的 URL 格式: https://vgmdb.net/product/<id>")
+        logger.info("输入 VGMdb product URL，输入 # 返回主菜单", extra={"plain": True})
+        logger.info("支持的 URL 格式: https://vgmdb.net/product/<id>", extra={"plain": True})
         while True:
             url = input("请输入链接：").strip()
             if url == "#":
-                print("返回主菜单")
+                logger.info("返回主菜单", extra={"plain": True})
+                clear_screen()
                 return
             Vgm(self.config['vgm']).process(url)

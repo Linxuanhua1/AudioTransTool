@@ -1,8 +1,8 @@
-from lib.services.audio.audio_handler import (
+from lib.services.transcode.audio import (
     WavHandler, M4aHandler, ApeHandler, TakHandler, TtaHandler,
     FlacHandler, WavepackHandler, DSDHandler, AiffHandler
 )
-from lib.services.image.image_handler import (
+from lib.services.transcode.image.image_handler import (
     JpgHandler, PngHandler, BmpHandler, TiffHandler, WebpHandler
 )
 

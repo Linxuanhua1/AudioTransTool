@@ -6,7 +6,7 @@ import struct
 import logging
 from pathlib import Path
 
-from lib.services.audio.audio_handler import AudioEncodeFormat
+from lib.services.transcode.audio import AudioEncodeFormat
 
 
 logger = logging.getLogger(__name__)

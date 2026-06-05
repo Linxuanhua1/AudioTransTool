@@ -3,7 +3,7 @@ from typing import Callable
 from jinja2 import Template
 import logging
 
-from lib.services.utils import PathManager
+from lib.services.utils import PathManager, clear_screen
 from .. import FolderScanner, FolderUtils
 from . import FieldExtractor, PatternValidator
 
@@ -37,8 +37,10 @@ class FolderRenamer:
             folder_p = PathManager.check_input_folder_path()
             if folder_p == "#":
                 logger.info("返回主菜单", extra={"plain": True})
+                clear_screen()
                 return
-
+            clear_screen()
+            logger.info(f"当前处理路径为{folder_p}", extra={"plain": True})
             rename_func(folder_p)
 
     def rename_from_name(self) -> None:
@@ -76,7 +78,7 @@ class FolderRenamer:
         pending: list[tuple[Path, Path]] = []
         for folder_p in album_dirs:
             # 1. 从音频标签提取字段
-            audio_tag: dict[str, set] = FieldExtractor.extract_from_audio_tags(folder_p)
+            audio_tag: dict[str, str] = FieldExtractor.extract_from_audio_tags(folder_p)
             # 如果没有读取到有效的 date 和 album，跳过
             if not (audio_tag.get("DATE") and audio_tag.get("ALBUM")):
                 logger.info(f"跳过（未找到有效标签）: {folder_p.name}", extra={"plain": True, "plain_to_file": True})
@@ -106,13 +108,15 @@ class FolderRenamer:
                 logger.debug(f"目标路径{new_p}已存在，跳过重命名{old_p}", extra={"plain": True, "plain_to_file": True})
                 continue
             old_p.rename(new_p)
-            logger.info(f"{old_p}\n重命名为\n{new_p}\n", extra={"plain": True, "plain_to_file": True})
+            logger.info(f"{old_p.name}\n重命名为\n{new_p.name}\n", extra={"plain": True, "plain_to_file": True})
             renamed.append((old_p, new_p))
-
-        is_ack = input('是否确认重命名？(y/n)：（回车为n）').strip().lower()
-        if is_ack != "y":
-            for old_p, new_p in renamed:
-                new_p.rename(old_p)
-            logger.info("已撤回重命名", extra={"plain": True})
+        if renamed:
+            is_ack = input('是否确认重命名？(y/n)：（回车为n）').strip().lower()
+            if is_ack != "y":
+                for old_p, new_p in renamed:
+                    new_p.rename(old_p)
+                logger.info("已撤回重命名", extra={"plain": True})
+            else:
+                logger.info("完成重命名", extra={"plain": True})
         else:
-            logger.info("完成重命名", extra={"plain": True})
+            logger.info("无需重命名", extra={"plain": True})

@@ -10,7 +10,7 @@ from .audio_info import AudioSource, AudioQuality
 class FolderScanner:
     @staticmethod
     def analyze(folder_p: Path, threshold: int,
-                folder_content_template: Template, standard_tag: dict[str, set]) -> ScanResult:
+                folder_content_template: Template, standard_tag: dict[str, str]) -> ScanResult:
         """扫描文件夹并返回完整的 ScanResult。"""
         status, audio_files = FolderScanner.scan(folder_p, threshold)
         quality_str, found_formats = AudioQuality.get_all_audio_qualities(audio_files)

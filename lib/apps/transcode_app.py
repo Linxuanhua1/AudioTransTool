@@ -1,6 +1,6 @@
 import logging
 
-from lib.services.task_manager import TaskManager, TaskType
+from lib.services.transcode.task_manager import TaskManager, TaskType
 from lib.services.utils import PathManager, clear_screen
 
 logger = logging.getLogger("musicbox.transcode")
@@ -17,6 +17,7 @@ class TranscodeApp:
             folder_p = path_manager.check_input_folder_path(is_double_check=True)
             if folder_p == "#":
                 logger.info("返回主菜单", extra={"plain": True})
+                clear_screen()
                 return
             clear_screen()
 
