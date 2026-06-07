@@ -1,5 +1,6 @@
 import copy
 import logging
+import tomlkit
 import tomllib
 from pathlib import Path
 
@@ -209,7 +210,6 @@ def ensure_config() -> dict:
         with open(CONFIG_PATH, "rb") as f:
             return tomllib.load(f)
 
-    import tomlkit  # 延迟导入：仅在读取/补全既有文件时才需要，缺它不影响其余功能导入
     default_doc = tomlkit.parse(content)
     user_doc = tomlkit.parse(CONFIG_PATH.read_text(encoding="utf-8"))
 
