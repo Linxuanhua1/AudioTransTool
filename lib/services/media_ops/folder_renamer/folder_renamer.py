@@ -1,0 +1,136 @@
+from pathlib import Path
+from typing import Callable
+from jinja2 import Template
+import logging
+
+from lib.utils import PathManager, clear_screen
+from .. import FolderScanner, FolderUtils
+from . import FieldExtractor, PatternValidator
+from lib.services.media_ops.folder_scanner.match_rules import SourceMatcher
+
+
+logger = logging.getLogger("musicbox.services.media_ops.folder_renamer.folder_renamer")
+
+
+class FolderRenamer:
+    def __init__(self, config: dict):
+        self.config: dict = config['rename']
+        self.extractor = FieldExtractor()
+        self.folder_utils = FolderUtils()
+        self.extract_pattern: str = self.config['extract_pattern']
+        self.extract_groups: str = self.config['extract_groups']
+        self.output_template: Template = Template(self.config['output_template'])
+        self.booklet_threshold: int = self.config['booklet_threshold']
+        self.folder_content_template: Template = Template(self.config['folder_content_template'])
+        self.disc_f_pattern: str = self.config['disc_f_pattern']
+        # 来源匹配器：由 config.toml [rename.match_rules] 驱动
+        self.matcher: SourceMatcher = SourceMatcher.from_config(self.config)
+        # 模板真正引用到的字段，用于按需计算（QUALITY / SOURCE / SCORE / FOLDER_CONTENT）
+        self.needed_fields: set[str] = FieldExtractor.referenced_fields(self.config['output_template'])
+
+    # ------------------------------------------------------------------ #
+    # 公开入口
+    # ------------------------------------------------------------------ #
+
+    def _run_batch_rename(self, rename_func: Callable[[Path], None]) -> None:
+        if not PatternValidator.confirm_pattern(self.config):
+            return
+
+        logger.info("\n提示输入路径的时候输入 # 返回主菜单", extra={"plain": True})
+
+        while True:
+            folder_p = PathManager.check_input_folder_path()
+            if folder_p == "#":
+                logger.info("返回主菜单", extra={"plain": True})
+                clear_screen()
+                return
+            clear_screen()
+            logger.info(f"当前处理路径为{folder_p}", extra={"plain": True})
+            rename_func(folder_p)
+
+    def rename_from_name(self) -> None:
+        self._run_batch_rename(self._batch_rename_from_name)
+
+    def rename_from_tag(self) -> None:
+        self._run_batch_rename(self._batch_rename_from_tag)
+
+    def run_rename_from_tag(self, folder_p: Path) -> None:
+        """供自定义任务流调用：直接对指定文件夹按音频标签重命名（不弹出交互式确认与循环）。"""
+        self._batch_rename_from_tag(Path(folder_p))
+
+    def run_rename_from_name(self, folder_p: Path) -> None:
+        """供自定义任务流调用：直接对指定文件夹按文件夹名重命名（不弹出交互式确认与循环）。"""
+        self._batch_rename_from_name(Path(folder_p))
+
+    # ------------------------------------------------------------------ #
+    # 批量处理逻辑
+    # ------------------------------------------------------------------ #
+
+    def _batch_rename_from_name(self, input_root: Path) -> None:
+        album_dirs = FolderUtils.collect_album_dirs(input_root, self.disc_f_pattern)
+
+        pending: list[tuple[Path, Path]] = []
+        for folder_p in album_dirs:
+            # 1. 从文件夹名提取字段
+            name_fields = FieldExtractor.extract_from_folder_name(folder_p.name, self.extract_pattern, self.extract_groups)
+            # 如果正则没有匹配到，跳过
+            if not any(name_fields.values()):
+                continue
+
+            # 2. 生成新名称
+            new_name = FieldExtractor.format_fields_to_name(name_fields, self.output_template)
+            if not new_name:
+                continue
+            # 3. 添加到重命名操作列表
+            new_path = folder_p.parent / PathManager.safe_filename(new_name)
+            pending.append((folder_p, new_path))
+        self._execute(pending)
+
+    def _batch_rename_from_tag(self, input_root: Path) -> None:
+        album_dirs = FolderUtils.collect_album_dirs(input_root, self.disc_f_pattern)
+        pending: list[tuple[Path, Path]] = []
+        for folder_p in album_dirs:
+            # 1. 从音频标签提取字段
+            audio_tag: dict[str, str] = FieldExtractor.extract_from_audio_tags(folder_p)
+            # 如果没有读取到有效的 date 和 album，跳过
+            if not (audio_tag.get("DATE") and audio_tag.get("ALBUM")):
+                logger.info(f"跳过（未找到有效标签）: {folder_p.name}", extra={"plain": True, "plain_to_file": True})
+                continue
+            # 2. 扫描文件夹获取音频信息（仅计算模板需要的字段）
+            scan_fields: dict[str, str] = FolderScanner.analyze(folder_p, self.booklet_threshold,
+                                                                self.folder_content_template, audio_tag,
+                                                                self.needed_fields, self.matcher).to_dict()
+            all_fields = audio_tag | scan_fields
+            # 3. 生成新名称
+            new_name = FieldExtractor.format_fields_to_name(all_fields, self.output_template)
+            if not new_name:
+                continue
+            # 4. 添加到重命名操作列表
+            new_path = folder_p.parent / PathManager.safe_filename(new_name)
+            pending.append((folder_p, new_path))
+        self._execute(pending)
+
+    # ------------------------------------------------------------------ #
+    # 验证和执行
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _execute(pending: list[tuple[Path, Path]]):
+        renamed: list[tuple[Path, Path]] = []
+        for old_p, new_p in pending:
+            if new_p.exists():
+                logger.debug(f"目标路径{new_p}已存在，跳过重命名{old_p}", extra={"plain": True, "plain_to_file": True})
+                continue
+            old_p.rename(new_p)
+            logger.info(f"{old_p.name}\n重命名为\n{new_p.name}\n", extra={"plain": True, "plain_to_file": True})
+            renamed.append((old_p, new_p))
+        if renamed:
+            is_ack = input('是否确认重命名？(y/n)：（回车为n）').strip().lower()
+            if is_ack != "y":
+                for old_p, new_p in renamed:
+                    new_p.rename(old_p)
+                logger.info("已撤回重命名", extra={"plain": True})
+            else:
+                logger.info("完成重命名", extra={"plain": True})
+        else:
+            logger.info("无需重命名", extra={"plain": True})
