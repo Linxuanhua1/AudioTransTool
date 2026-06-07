@@ -87,7 +87,7 @@ release 内含 `bin/` 目录，已打包好所需的命令行编解码器与 lib
 切换终端目录到代码文件夹，执行：
 
 ```bash
-pip install .
+pip install -r requirements.txt
 ```
 
 主要依赖：`mutagen`、`pyvips`、`tqdm`、`psutil`、`jinja2`、`tomlkit`、`beautifulsoup4`、`requests`、`chardet`、`musicbrainzngs`。
