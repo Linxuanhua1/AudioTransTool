@@ -154,4 +154,4 @@ album_fld_tpl   = "[{date}][{catno}][{album}][{media_format}]"
 
 ---
 
-更详细的模块结构与运行流程见 [`ARCHITECTURE.md`](./ARCHITECTURE.md)。
+更详细的模块结构与运行流程见 [`architecture.md`](./architecture.md)。
