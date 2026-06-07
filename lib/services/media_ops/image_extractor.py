@@ -25,6 +25,11 @@ class ImageExtractor:
     extractor.extract_and_remove()
     """
 
+    def __init__(self) -> None:
+        # 复用 PathManager 的输出路径分配逻辑，避免覆盖已存在的封面文件。
+        # 同一实例内部维护 _reserved 集合，保证整轮提取中不会重名互相覆盖。
+        self._path_manager = PathManager()
+
     def extract_and_remove(self) -> None:
         """交互式入口。"""
         logger.info("询问输入文件夹的时候，输入 # 返回主菜单", extra={"plain": True})
@@ -105,18 +110,19 @@ class ImageExtractor:
     # 保存图片为 PNG
     # ------------------------------------------------------------------ #
 
-    @staticmethod
-    def _save_images(album_dir: Path, images: list[InternalImageTag]) -> int:
+    def _save_images(self, album_dir: Path, images: list[InternalImageTag]) -> int:
         count = 0
-        for i, img in enumerate(images):
-            name = "Cover.png" if i == 0 else f"Cover({i + 1}).png"
-            out_path = album_dir / name
+        for img in images:
+            # 统一以 Cover.png 作为期望名，由 PathManager 负责避让：
+            # 已存在的文件或本轮已分配的文件会自动顺延为 Cover (1).png、Cover (2).png……
+            desired_path = album_dir / "Cover.png"
+            out_path = self._path_manager.get_output_path(desired_path)
 
             try:
                 vip_img = pyvips.Image.new_from_buffer(img.data, "")
                 vip_img.pngsave(str(out_path))
                 count += 1
-                logger.info(f"  保存：{name}", extra={"plain": True, "plain_to_file": True})
+                logger.info(f"  保存：{out_path.name}", extra={"plain": True, "plain_to_file": True})
             except Exception as e:
                 logger.error(f"  保存图片失败：{e}", extra={"plain": True, "plain_to_file": True})
 

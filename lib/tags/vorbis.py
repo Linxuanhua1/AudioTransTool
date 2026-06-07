@@ -66,7 +66,9 @@ class VorbisReader(MetaReader):
                 std_tags.setdefault(field.upper(), set()).update(tag)
 
         if hasattr(self.audio, "pictures"):
-            std_tags.setdefault("PIC", set()).update(self.audio.pictures)
+            for pic in self.audio.pictures:
+                internal_image = InternalImageTag(pic.data, ImageType(pic.type), pic.desc, pic.mime)
+                std_tags.setdefault("PIC", set()).add(internal_image)
         return std_tags
 
 

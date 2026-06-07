@@ -11,7 +11,7 @@ class TranscodeApp:
         self.config = config
 
     @property
-    def sub_actions(self) -> list[tuple[str, type[TranscodeTask]]]:
+    def actions(self) -> list[tuple[str, type[TranscodeTask]]]:
         return [
             ("audio transcode", AudioTranscode),
             ("split cue", AudioSplit),
@@ -21,7 +21,7 @@ class TranscodeApp:
     def run(self) -> None:
         while True:
             logger.info("\n请选择转码功能：", extra={"plain": True})
-            for i, (name, _) in enumerate(self.sub_actions, 1):
+            for i, (name, _) in enumerate(self.actions, 1):
                 logger.info(f"  {i}. {name}", extra={"plain": True})
             logger.info("  #. 返回上一级", extra={"plain": True})
 
@@ -33,8 +33,8 @@ class TranscodeApp:
 
             clear_screen()
 
-            if choice.isdigit() and 1 <= int(choice) <= len(self.sub_actions):
-                _, task_cls = self.sub_actions[int(choice) - 1]
+            if choice.isdigit() and 1 <= int(choice) <= len(self.actions):
+                _, task_cls = self.actions[int(choice) - 1]
                 self._run_single(task_cls)
             else:
                 logger.info("输入不正确，请重新输入", extra={"plain": True})
