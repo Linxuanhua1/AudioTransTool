@@ -2,21 +2,15 @@ import subprocess, struct, logging, mutagen
 from pathlib import Path
 from collections.abc import Generator
 from contextlib import contextmanager
-from enum import Enum, auto
 from abc import ABC, abstractmethod
 
-from lib.services.tags.transfer import TagsTransfer
+from .encode_format import AudioEncodeFormat
+from lib.tags.transfer import TagsTransfer
 from lib.services.constants import (CMD_WAVPACK2WAVBYTES, CMD_APE2WAVBYTES, CMD_TAK2WAVBYTES, CMD_TTA2WAVBYTES,
                                     CMD_BYTES2WV, CMD_M4A2WAVBYTES, CMD_WAVBYTES2FLAC, CMD_PCMBYTES2FLAC)
-from lib.services.utils.path_manager import PathManager
+from lib.utils import PathManager
 
 logger = logging.getLogger("musicbox.services.audio.audio_handler")
-
-
-class AudioEncodeFormat(Enum):
-    FLAC = auto()
-    WAVEPACK = auto()
-    UNSUPPORTED = auto()
 
 
 class AudioProcessingError(Exception):

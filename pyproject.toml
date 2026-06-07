@@ -13,5 +13,6 @@ dependencies = [
     "mutagen",
     "pyvips",
     "jinja2",
-    "psutil"
+    "psutil",
+    "tomlkit"
 ]

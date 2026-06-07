@@ -3,9 +3,10 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Any
 
-from lib.services.constants import ALLOWED_READ_AUDIO_FORMAT, TYPE_TO_READER, TYPE_TO_WRITER
-from lib.services.tags import InternalImageTag
-from lib.services.utils import PathManager, clear_screen
+from lib.services.constants import ALLOWED_READ_AUDIO_FORMAT
+from lib.tags.registry import TYPE_TO_READER, TYPE_TO_WRITER
+from lib.tags import InternalImageTag
+from lib.utils import PathManager, clear_screen
 
 
 logger = logging.getLogger("musicbox.services.media_ops.image_extractor")
@@ -34,6 +35,10 @@ class ImageExtractor:
                 clear_screen()
                 return
             self._process_root(Path(folder_path))
+
+    def run_extract_and_remove(self, folder_p: Path) -> None:
+        """供自定义任务流调用：直接对指定文件夹提取并移除内嵌图片（不弹出交互式循环）。"""
+        self._process_root(Path(folder_p))
 
     # ------------------------------------------------------------------ #
     # 处理根目录

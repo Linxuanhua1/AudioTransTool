@@ -2,8 +2,9 @@ from pathlib import Path
 from typing import Any
 import mutagen, re, logging
 
-from lib.services.constants import ALLOWED_READ_AUDIO_FORMAT, TYPE_TO_READER, TYPE_TO_WRITER
-from lib.services.utils import PathManager, clear_screen
+from lib.services.constants import ALLOWED_READ_AUDIO_FORMAT
+from lib.tags.registry import TYPE_TO_READER, TYPE_TO_WRITER
+from lib.utils import PathManager, clear_screen
 
 logger = logging.getLogger("musicbox.services.media_ops.tag_separator")
 
@@ -27,6 +28,10 @@ class TagSeparator:
                 clear_screen()
                 return
             self._process_directory(Path(folder_p))
+
+    def run_separate_tag(self, folder_p: Path) -> None:
+        """供自定义任务流调用：直接对指定文件夹做标签分割（不弹出交互式循环）。"""
+        self._process_directory(Path(folder_p))
 
     # ------------------------------------------------------------------ #
     # 目录处理

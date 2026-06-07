@@ -1,6 +1,6 @@
 import musicbrainzngs, logging
 
-from lib.services.utils import clear_screen
+from lib.utils import clear_screen
 from lib.services.media_ops.remote_fetcher.metadb import Vgm
 
 

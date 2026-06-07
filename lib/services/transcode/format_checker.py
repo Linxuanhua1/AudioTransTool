@@ -1,12 +1,12 @@
 """
 格式检测器：集中管理所有格式的"是否需要转换"判断逻辑。
-由 TaskManager 在批量 probe 之后调用，决定是否将文件加入转码队列。
+由各转码任务类（AudioTranscode / AudioSplit / ImageTranscode）在批量 probe 之后调用，决定是否将文件加入转码队列。
 """
 import struct
 import logging
 from pathlib import Path
 
-from lib.services.transcode.audio import AudioEncodeFormat
+from .audio.encode_format import AudioEncodeFormat
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class AudioFormatChecker:
 
     @staticmethod
     def _check_flac(metadata: dict, file_p: Path, config: dict) -> AudioEncodeFormat:
-        if not config['transcode'].get('is_en_flac0_compress', False):
+        if not config['transcode']['is_en_flac0_compress']:
             return AudioEncodeFormat.UNSUPPORTED
 
         try:
@@ -92,7 +92,7 @@ class AudioFormatChecker:
 
     @staticmethod
     def _check_dsd(metadata: dict, file_p: Path, config: dict) -> AudioEncodeFormat:
-        if not config['transcode'].get('is_en_dsd_compress', False):
+        if not config['transcode']['is_en_dsd_compress']:
             return AudioEncodeFormat.UNSUPPORTED
 
         file_type = (metadata.get('FileType') or '').lower()

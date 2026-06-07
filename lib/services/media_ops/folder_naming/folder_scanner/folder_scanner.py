@@ -5,17 +5,41 @@ from jinja2 import Template
 from lib.services.constants import IMAGE_FORMATS, AUDIO_FORMAT_ORDER, ALLOWED_READ_AUDIO_FORMAT
 from .scan_models import ScanResult, FolderStatus
 from .audio_info import AudioSource, AudioQuality
+from .match_rules import SourceMatcher
 
 
 class FolderScanner:
     @staticmethod
     def analyze(folder_p: Path, threshold: int,
-                folder_content_template: Template, standard_tag: dict[str, str]) -> ScanResult:
-        """扫描文件夹并返回完整的 ScanResult。"""
+                folder_content_template: Template, standard_tag: dict[str, str],
+                needed_fields: set[str], matcher: SourceMatcher) -> ScanResult:
+        """扫描文件夹并返回完整的 ScanResult。
+
+        只计算 output_template 真正引用到的字段，避免无谓的重活：
+          - QUALITY        会对所有音频做 MediaProbe（最重）
+          - SOURCE / SCORE 可能会调用 cambia 解析 log
+          - FOLDER_CONTENT 需要渲染后缀模板
+        needed_fields 即模板里引用到的字段集合（见 FieldExtractor.referenced_fields）。
+        """
         status, audio_files = FolderScanner.scan(folder_p, threshold)
-        quality_str, found_formats = AudioQuality.get_all_audio_qualities(audio_files)
-        suffix = FolderScanner.build_suffix(found_formats, status, folder_content_template)
-        src, score = AudioSource.detect_source(status, folder_p, standard_tag)
+        # 扩展名集合很便宜，且 FOLDER_CONTENT / EXT 规则都要用，先算好
+        found_formats: set[str] = {p.suffix.lower() for p in audio_files}
+
+        # QUALITY：仅在模板引用时才探测（否则不会遍历所有音频）
+        quality_str = ""
+        if "QUALITY" in needed_fields:
+            quality_str, found_formats = AudioQuality.get_all_audio_qualities(audio_files)
+
+        # FOLDER_CONTENT：仅在模板引用时才构建后缀
+        suffix = ""
+        if "FOLDER_CONTENT" in needed_fields:
+            suffix = FolderScanner.build_suffix(found_formats, status, folder_content_template)
+
+        # SOURCE / SCORE：仅在模板引用时才检测来源
+        src, score = "", ""
+        if needed_fields & {"SOURCE", "SCORE"}:
+            src, score = AudioSource.detect_source(status, folder_p, standard_tag, matcher, found_formats)
+
         return ScanResult(folder_content=suffix, source=src, score=score, quality=quality_str,
                           found_formats=found_formats, status=status)
 

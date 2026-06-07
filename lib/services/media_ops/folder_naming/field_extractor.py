@@ -2,13 +2,13 @@ import re, mutagen, logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from jinja2 import Template
+from jinja2 import Template, Environment, meta
 
 from lib.services.constants import (
     RENAMER_SUPPORTED_EXTRACT_FIELD,
     ALLOWED_READ_AUDIO_FORMAT,
-    TYPE_TO_READER,
 )
+from lib.tags.registry import TYPE_TO_READER
 from ..catno_helper import CatNoHelper
 
 
@@ -70,6 +70,16 @@ class FieldExtractor:
             out_tag = {k: v[0] for k, v in tmp_tag.items()}
 
             return out_tag
+
+    @staticmethod
+    def referenced_fields(template_source: str) -> set[str]:
+        """解析 Jinja2 模板里引用到的全部变量名。
+
+        既包含 {{ VAR }}，也包含仅出现在 {% if VAR %} 中的变量，
+        供上层判断需要计算哪些重命名字段。
+        """
+        ast = Environment().parse(template_source)
+        return meta.find_undeclared_variables(ast)
 
     @staticmethod
     def format_fields_to_name(fields: dict[str, str], output_template: Template) -> Optional[str]:

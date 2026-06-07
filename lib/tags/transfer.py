@@ -2,7 +2,7 @@ from pathlib import Path
 import mutagen, logging
 
 from . import MetaReader, MetaWriter, InternalTags
-from lib.services.constants import TYPE_TO_READER, TYPE_TO_WRITER, TAG_GROUPS
+from lib.tags.registry import TYPE_TO_READER, TYPE_TO_WRITER, TAG_GROUPS
 
 logger = logging.getLogger("musicbox.services.tags.transfer")
 

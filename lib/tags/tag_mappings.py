@@ -22,7 +22,7 @@ from mutagen.tak import TAK
 from mutagen.mp4 import MP4
 from mutagen.asf import ASF
 
-from lib.services.tags import ImageType
+from lib.tags import ImageType
 
 
 # ============================================================================
@@ -34,91 +34,6 @@ VORBIS_TYPES = (FLAC, OggFileType, OggVorbis)
 MP4_TYPES = (AAC, MP4)
 APEV2_TYPES = (MonkeysAudio, WavPack, TAK)
 ASF_TYPES = ASF
-
-
-# ============================================================================
-# 延迟导入机制 - 避免循环依赖
-# ============================================================================
-
-# 缓存已构建的映射，避免重复导入
-_TYPE_TO_READER_CACHE = None
-_TYPE_TO_WRITER_CACHE = None
-_TAG_GROUPS_CACHE = None
-
-
-def _get_type_to_reader():
-    """延迟构建 TYPE_TO_READER 映射，避免循环导入"""
-    global _TYPE_TO_READER_CACHE
-    if _TYPE_TO_READER_CACHE is None:
-        # 在函数内部导入，避免模块加载时的循环依赖
-        from lib.services.tags.id3 import ID3Reader
-        from lib.services.tags.mp4 import MP4Reader
-        from lib.services.tags.apev2 import APEv2Reader
-        from lib.services.tags.vorbis import VorbisReader
-        from lib.services.tags.asf import AsfReader
-        
-        _TYPE_TO_READER_CACHE = {
-            **{t: ID3Reader for t in ID3_TYPES},
-            **{t: VorbisReader for t in VORBIS_TYPES},
-            **{t: MP4Reader for t in MP4_TYPES},
-            **{t: APEv2Reader for t in APEV2_TYPES},
-            ASF: AsfReader
-        }
-    return _TYPE_TO_READER_CACHE
-
-
-def _get_type_to_writer():
-    """延迟构建 TYPE_TO_WRITER 映射，避免循环导入"""
-    global _TYPE_TO_WRITER_CACHE
-    if _TYPE_TO_WRITER_CACHE is None:
-        from lib.services.tags.id3 import ID3Writer
-        from lib.services.tags.mp4 import MP4Writer
-        from lib.services.tags.apev2 import APEv2Writer
-        from lib.services.tags.vorbis import VorbisWriter
-        
-        _TYPE_TO_WRITER_CACHE = {
-            **{t: ID3Writer for t in ID3_TYPES},
-            **{t: VorbisWriter for t in VORBIS_TYPES},
-            **{t: MP4Writer for t in MP4_TYPES},
-            **{t: APEv2Writer for t in APEV2_TYPES},
-        }
-    return _TYPE_TO_WRITER_CACHE
-
-
-def _get_tag_groups():
-    """延迟构建 TAG_GROUPS 映射，避免循环导入"""
-    global _TAG_GROUPS_CACHE
-    if _TAG_GROUPS_CACHE is None:
-        from lib.services.tags.id3 import ID3Reader, ID3Writer
-        from lib.services.tags.mp4 import MP4Reader, MP4Writer
-        from lib.services.tags.apev2 import APEv2Reader, APEv2Writer
-        from lib.services.tags.vorbis import VorbisReader, VorbisWriter
-        
-        _TAG_GROUPS_CACHE = [
-            (ID3Reader, ID3Writer),
-            (VorbisReader, VorbisWriter),
-            (MP4Reader, MP4Writer),
-            (APEv2Reader, APEv2Writer),
-        ]
-    return _TAG_GROUPS_CACHE
-
-
-# ============================================================================
-# 模块级延迟导入接口（Python 3.7+）
-# ============================================================================
-
-def __getattr__(name):
-    """
-    模块级属性访问器，实现延迟导入
-    使用方式：from lib.constants import TYPE_TO_READER  # 自动调用延迟导入
-    """
-    if name == 'TYPE_TO_READER':
-        return _get_type_to_reader()
-    elif name == 'TYPE_TO_WRITER':
-        return _get_type_to_writer()
-    elif name == 'TAG_GROUPS':
-        return _get_tag_groups()
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 # ============================================================================

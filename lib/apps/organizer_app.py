@@ -1,6 +1,6 @@
 import logging
 from lib.services.media_ops import FolderRenamer, TagSeparator, RemoteFetcher, ImageExtractor
-from lib.services.utils import clear_screen
+from lib.utils import clear_screen
 
 
 logger = logging.getLogger("musicbox.organizer")

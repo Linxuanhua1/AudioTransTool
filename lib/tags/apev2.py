@@ -3,7 +3,7 @@ from mutagen.apev2 import APEv2
 from pathlib import Path
 
 from . import InternalImageTag, ImageType, MetaReader, MetaWriter, InternalTags
-from lib.services.constants import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
+from lib.tags.tag_mappings import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
 
 
 class APEv2Writer(MetaWriter):

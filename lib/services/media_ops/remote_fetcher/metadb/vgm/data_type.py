@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from lib.services.utils import PathManager
+from lib.utils import PathManager
 
 
 # --------------------------------------------------------------------------- #

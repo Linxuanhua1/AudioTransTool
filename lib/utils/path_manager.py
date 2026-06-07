@@ -23,10 +23,6 @@ class PathManager:
             if folder_p in ("#", "$"):
                 return str(folder_p)
 
-            if folder_p == "":
-                logger.info("输入为空，请重新输入", extra={"plain": True})
-                continue
-
             path = Path(folder_p)
 
             if not path.exists():

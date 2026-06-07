@@ -5,7 +5,7 @@ from typing import Callable
 from mutagen.mp4 import MP4Cover, MP4Tags, MP4FreeForm
 
 from . import InternalImageTag, ImageType, MetaReader, MetaWriter, InternalTags
-from lib.services.constants import MP4_TO_STANDARD, STANDARD_TO_MP4, MP4_TUPLE_REVERSE, MP4_INT_FIELDS, MP4_BOOL_FIELDS
+from lib.tags.tag_mappings import MP4_TO_STANDARD, STANDARD_TO_MP4, MP4_TUPLE_REVERSE, MP4_INT_FIELDS, MP4_BOOL_FIELDS
 
 
 logger = logging.getLogger(__name__)

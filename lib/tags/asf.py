@@ -1,7 +1,7 @@
 from pathlib import Path
 import struct
 
-from lib.services.constants import ASF_TO_STANDARD
+from lib.tags.tag_mappings import ASF_TO_STANDARD
 from . import InternalImageTag, ImageType, MetaWriter, MetaReader, InternalTags
 
 

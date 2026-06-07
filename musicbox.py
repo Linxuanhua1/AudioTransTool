@@ -1,11 +1,10 @@
-import os, tomllib
-from pathlib import Path
+import os
 
 os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.getcwd() + "/bin/"
 os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.getcwd() + "/bin/vips-dev-8.18/bin"
 
-from lib.services.utils import setup_logger, generate_config, clear_screen
-from lib.apps import OrganizerApp, TranscodeApp
+from lib.utils import setup_logger, ensure_config, clear_screen
+from lib.apps import OrganizerApp, TranscodeApp, CustomTaskApp
 
 logger = setup_logger("musicbox")
 
@@ -16,12 +15,14 @@ class MusicBoxApp:
         self.config = config
         self.organizer = OrganizerApp(config)
         self.transcode = TranscodeApp(config)
+        self.custom_task = CustomTaskApp(config)
 
     def run(self) -> None:
         while True:
             logger.info("\n请选择主功能：", extra={"plain": True})
             logger.info("  1. transcode", extra={"plain": True})
             logger.info("  2. media_ops", extra={"plain": True})
+            logger.info("  3. Custom Task Process", extra={"plain": True})
             logger.info("  #. 退出程序", extra={"plain": True})
 
             choice = input("请输入数字：").strip()
@@ -34,17 +35,14 @@ class MusicBoxApp:
                 self.transcode.run()
             elif choice == "2":
                 self.organizer.run()
+            elif choice == "3":
+                self.custom_task.run()
             else:
                 logger.info("输入不正确，请重新输入", extra={"plain": True})
 
 
 def load_config() -> dict:
-    config_path = Path("config.toml")
-    if not config_path.exists():
-        generate_config()
-
-    with open(config_path, "rb") as f:
-        return tomllib.load(f)
+    return ensure_config()
 
 
 def main() -> None:

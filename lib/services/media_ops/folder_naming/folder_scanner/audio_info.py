@@ -2,9 +2,10 @@ from decimal import Decimal
 from pathlib import Path
 import subprocess, json
 
-from lib.services.constants import DSD_RATE_MAP, COMMENT_SOURCE_MAP
+from lib.services.constants import DSD_RATE_MAP
 from .scan_models import FolderStatus
-from lib.services.utils.media_probe import MediaProbe
+from .match_rules import SourceMatcher
+from lib.utils import MediaProbe
 
 
 class AudioQuality:
@@ -230,51 +231,29 @@ class AudioInfoParse:
 
 class AudioSource:
     @staticmethod
-    def detect_source(status: FolderStatus, folder_p: Path, standard_tag: dict[str, str]) -> tuple[str, str]:
+    def detect_source(status: FolderStatus, folder_p: Path,
+                      standard_tag: dict[str, str], matcher: SourceMatcher,
+                      found_formats: set[str]) -> tuple[str, str]:
         """
         检测音频来源，统一返回 (source, score)。
-        有日志时 source=ripper, score=抓取评分；无日志时 score=""。
+
+        - 有 .log 时走日志解析：source=ripper, score=抓取评分。
+        - 无 .log 时交由 SourceMatcher 按 [rename.match_rules] 规则判定，score=""。
+
+        Args:
+            status:        文件夹扫描状态（是否含 log 等）。
+            folder_p:      专辑文件夹路径。
+            standard_tag:  标准化后的标签字典。
+            matcher:       由 [rename.match_rules] 构造的来源匹配器。
+            found_formats: 文件夹内音频扩展名集合，供 field='EXT' 的规则使用。
         """
         if status.has_log:
             log_p = next(folder_p.rglob("*.log"))
             ripper, score = AudioSource._probe_log(log_p)
             return ripper, score
-        else:
-            for p in folder_p.rglob("*"):
-                ext = p.suffix.lower()
 
-                if standard_tag is None:
-                    return "WEB", ""
-
-                # Vorbis / ID3 共用字段（AudioTagReader 已统一填充）
-                if standard_tag.get("QBZ_TID", None):
-                    return "Qobuz", ""
-                url = standard_tag.get("URL", None)
-                if url:
-                    url = url.lower()
-                    if "tidal" in url:
-                        return "Tidal", ""
-                    elif "amazon" in url:
-                        return "Amazon", ""
-
-                comment = standard_tag.get("COMMENT", None)
-                if comment:
-                    comment = comment.lower()
-                    for key, value in COMMENT_SOURCE_MAP.items():
-                        if key in comment:
-                            return value, ""
-                source = standard_tag.get("SOURCE", None)
-                if source:
-                    return source, ""
-                if ext == ".dsf":
-                    return "ISO转DSF", ""
-
-                if ext in (".wma", ".mp3", ".ogg", ".m4a"):
-                    return "WEB", ""
-
-                return "WEB", ""
-
-            return "WEB", ""
+        source = matcher.match(standard_tag, found_formats)
+        return source, ""
 
 
     @staticmethod

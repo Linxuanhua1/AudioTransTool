@@ -2,7 +2,7 @@ import subprocess, chardet, logging, struct
 from pathlib import Path
 from mutagen.flac import FLAC
 from typing import Any
-from lib.services.utils import PathManager
+from lib.utils import PathManager
 
 
 logger = logging.getLogger("musicbox.services.audio.audio_splitter")

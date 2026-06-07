@@ -3,9 +3,10 @@ from typing import Callable
 from jinja2 import Template
 import logging
 
-from lib.services.utils import PathManager, clear_screen
+from lib.utils import PathManager, clear_screen
 from .. import FolderScanner, FolderUtils
 from . import FieldExtractor, PatternValidator
+from .folder_scanner.match_rules import SourceMatcher
 
 
 logger = logging.getLogger("musicbox.services.media_ops.folder_naming.folder_renamer")
@@ -22,6 +23,10 @@ class FolderRenamer:
         self.booklet_threshold: int = self.config['booklet_threshold']
         self.folder_content_template: Template = Template(self.config['folder_content_template'])
         self.disc_f_pattern: str = self.config['disc_f_pattern']
+        # 来源匹配器：由 config.toml [rename.match_rules] 驱动
+        self.matcher: SourceMatcher = SourceMatcher.from_config(self.config)
+        # 模板真正引用到的字段，用于按需计算（QUALITY / SOURCE / SCORE / FOLDER_CONTENT）
+        self.needed_fields: set[str] = FieldExtractor.referenced_fields(self.config['output_template'])
 
     # ------------------------------------------------------------------ #
     # 公开入口
@@ -48,6 +53,14 @@ class FolderRenamer:
 
     def rename_from_tag(self) -> None:
         self._run_batch_rename(self._batch_rename_from_tag)
+
+    def run_rename_from_tag(self, folder_p: Path) -> None:
+        """供自定义任务流调用：直接对指定文件夹按音频标签重命名（不弹出交互式确认与循环）。"""
+        self._batch_rename_from_tag(Path(folder_p))
+
+    def run_rename_from_name(self, folder_p: Path) -> None:
+        """供自定义任务流调用：直接对指定文件夹按文件夹名重命名（不弹出交互式确认与循环）。"""
+        self._batch_rename_from_name(Path(folder_p))
 
     # ------------------------------------------------------------------ #
     # 批量处理逻辑
@@ -83,9 +96,10 @@ class FolderRenamer:
             if not (audio_tag.get("DATE") and audio_tag.get("ALBUM")):
                 logger.info(f"跳过（未找到有效标签）: {folder_p.name}", extra={"plain": True, "plain_to_file": True})
                 continue
-            # 2. 扫描文件夹获取音频信息
+            # 2. 扫描文件夹获取音频信息（仅计算模板需要的字段）
             scan_fields: dict[str, str] = FolderScanner.analyze(folder_p, self.booklet_threshold,
-                                                                self.folder_content_template, audio_tag).to_dict()
+                                                                self.folder_content_template, audio_tag,
+                                                                self.needed_fields, self.matcher).to_dict()
             all_fields = audio_tag | scan_fields
             # 3. 生成新名称
             new_name = FieldExtractor.format_fields_to_name(all_fields, self.output_template)

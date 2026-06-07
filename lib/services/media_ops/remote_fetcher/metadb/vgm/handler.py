@@ -4,7 +4,7 @@ import random, time, threading, requests, logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from . import AlbumInfo, SubProduct, VgmParser
-from lib.services.utils import PathManager
+from lib.utils import PathManager
 
 
 logger = logging.getLogger("musicbox.services.media_ops.remote_fetcher.metadb.vgm.handler")
