@@ -35,9 +35,9 @@ class ImageExtractor:
         logger.info("询问输入文件夹的时候，输入 # 返回主菜单", extra={"plain": True})
         while True:
             folder_path = PathManager.check_input_folder_path()
+            clear_screen()
             if folder_path == "#":
                 logger.info("返回主菜单", extra={"plain": True})
-                clear_screen()
                 return
             self._process_root(Path(folder_path))
 
