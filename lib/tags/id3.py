@@ -6,7 +6,9 @@ from mutagen.id3 import (
     USLT, PCST, APIC, COMM, TXXX, WXXX, UFID, ID3)
 
 from . import InternalImageTag, ImageType
-from lib.tags.tag_mappings import ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_TO_ID3, ID3_TUPLE_REVERSE, ID3_FRAME_CLASSES
+from lib.tags.tag_mappings import (ID3_TO_STANDARD, ID3_NOT_SUPPORTED, STANDARD_TO_ID3, ID3_TUPLE_REVERSE,
+                                   ID3_FRAME_CLASSES, ID3_TXXX_MUSICBRAINZ_DESC_TO_VORBIS,
+                                   VORBIS_TO_ID3_TXXX_MUSICBRAINZ_DESC)
 from .base import MetaReader, MetaWriter, InternalTags
 
 
@@ -91,8 +93,10 @@ class ID3Writer(MetaWriter):
 
     def _write_txxx(self, std_key: str, values: set) -> None:
         if std_key.startswith("MUSICBRAINZ_"):
-            parts = std_key[len("MUSICBRAINZ_"):].replace("_", " ").title()
-            desc = f"MusicBrainz {parts}"
+            desc = VORBIS_TO_ID3_TXXX_MUSICBRAINZ_DESC.get(std_key)
+            if desc is None:
+                parts = std_key[len("MUSICBRAINZ_"):].replace("_", " ").title()
+                desc = f"MusicBrainz {parts}"
         elif std_key == "ACOUSTID_ID":
             desc = "Acoustid Id"
         else:
@@ -188,12 +192,15 @@ class ID3Reader(MetaReader):
         return {desc_key: set(tag.text)}
 
     def _handle_txxx(self, tag, field) -> InternalTags:
-        desc_lower = tag.desc.lower()
-        if desc_lower.startswith("musicbrainz"):
-            parts = tag.desc.upper().split(" ")
-            map_field = parts[0] + "_" + "".join(parts[1:])
-        elif desc_lower == "acoustid id":
-            map_field = "ACOUSTID_ID"
+        desc_upper = tag.desc.upper()
+        if desc_upper.startswith("MUSICBRAINZ"):
+            map_field = ID3_TXXX_MUSICBRAINZ_DESC_TO_VORBIS.get(desc_upper)
+            if map_field is None:
+                # TXXX:MusicBrainz Original Album Id 目标 MUSICBRAINZ_ORIGINALALBUMID
+                parts = tag.desc.upper().split(" ")
+                map_field = parts[0] + "_" + "".join(parts[1:])
+        elif desc_upper == "ACOUSTID ID":
+            map_field = desc_upper
         else:
             map_field = tag.desc.upper()
         return {map_field: set(tag.text)}

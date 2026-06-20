@@ -48,6 +48,18 @@ ID3_NOT_SUPPORTED = [
     'SYTC', "ATXT", 'CHAP', 'CTOC', 'USER', 'RVAD'
 ]
 
+ID3_TXXX_MUSICBRAINZ_DESC_TO_VORBIS = {
+    "MUSICBRAINZ ALBUM RELEASE COUNTRY": "RELEASECOUNTRY",
+    "MUSICBRAINZ ALBUM STATUS": "RELEASESTATUS",
+    "MUSICBRAINZ ALBUM TYPE": "RELEASETYPE",
+}
+
+VORBIS_TO_ID3_TXXX_MUSICBRAINZ_DESC = {
+    "RELEASECOUNTRY": "MUSICBRAINZ ALBUM RELEASE COUNTRY",
+    "RELEASESTATUS": "MUSICBRAINZ ALBUM STATUS",
+    "RELEASETYPE": "MUSICBRAINZ ALBUM TYPE",
+}
+
 # ID3V2.3里TYER是年份，TDAT是几月几日，TRDA才是写完整日期的
 ID3_TO_STANDARD = {
     'TALB': 'ALBUM',
@@ -226,7 +238,7 @@ ID3_FRAME_CLASSES: dict[str, type] = {
 
 APEV2_TO_STANDARD = {
     "ALBUM ARTIST": "ALBUMARTIST",
-    "TRACK": "TRACKNUMBER",
+    "TRACK": ("TRACKNUMBER", "TOTALTRACKS"),
     "COVER ART (OTHER)": ImageType.Other,
     "COVER ART (ICON)": ImageType.Icon,
     "COVER ART (OTHER ICON)": ImageType.OtherIcon,
@@ -248,11 +260,19 @@ APEV2_TO_STANDARD = {
     "COVER ART (ILLUSTRATION)": ImageType.Illustration,
     "COVER ART (BAND LOGOTYPE)": ImageType.BandLogo,
     "COVER ART (PUBLISHER LOGOTYPE)": ImageType.PublisherLogo,
+    "DISCNUMBER": ("DISCNUMBER", "TOTALDISCS"),
 }
 
 STANDARD_TO_APEV2: dict[str, str] = {
     'ALBUMARTIST': 'Album Artist',
     'TRACKNUMBER': 'TRACK'
+}
+
+APEV2_TUPLE_REVERSE: dict[str, tuple[str, int]] = {
+    'DISCNUMBER': ('DISCNUMBER', 0),
+    'TOTALDISCS': ('DISCNUMBER', 1),
+    'TOTALTRACKS': ('TRACK', 1),
+    'TRACKNUMBER': ('TRACK', 0)
 }
 
 IMAGE_TYPE_TO_APE: dict[ImageType, str] = {
@@ -344,7 +364,23 @@ MP4_TO_STANDARD = {
     '©lyr': 'LYRICS',
     '©wrk': 'WORK',
     '©day': 'DATE',
-    "akID": "APPLESTOREACCOUNTTYPE"
+    "akID": "APPLESTOREACCOUNTTYPE",
+
+    # MusicBrainz
+    "----:com.apple.iTunes:MusicBrainz Album Artist Id": "MUSICBRAINZ_ALBUMARTISTID",
+    "----:com.apple.iTunes:MusicBrainz Album Id": "MUSICBRAINZ_ALBUMID",
+    "----:com.apple.iTunes:MusicBrainz Album Release Country": "RELEASECOUNTRY",
+    "----:com.apple.iTunes:MusicBrainz Album Status": "RELEASESTATUS",
+    "----:com.apple.iTunes:MusicBrainz Album Type": "RELEASETYPE",
+    "----:com.apple.iTunes:MusicBrainz Artist Id": "MUSICBRAINZ_ARTISTID",
+    "----:com.apple.iTunes:MusicBrainz Disc Id": "MUSICBRAINZ_DISCID",
+    "----:com.apple.iTunes:MusicBrainz Original Album Id": "MUSICBRAINZ_ORIGINALALBUMID",
+    "----:com.apple.iTunes:MusicBrainz Original Artist Id": "MUSICBRAINZ_ORIGINALARTISTID",
+    "----:com.apple.iTunes:MusicBrainz Release Group Id": "MUSICBRAINZ_RELEASEGROUPID",
+    "----:com.apple.iTunes:MusicBrainz Release Track Id": "MUSICBRAINZ_RELEASETRACKID",
+    "----:com.apple.iTunes:MusicBrainz Track Id": "MUSICBRAINZ_TRACKID",
+    "----:com.apple.iTunes:MusicBrainz TRM Id": "MUSICBRAINZ_TRMID",
+    "----:com.apple.iTunes:MusicBrainz Work Id": "MUSICBRAINZ_WORKID",
 }
 
 STANDARD_TO_MP4: dict[str, str] = {
@@ -395,7 +431,7 @@ STANDARD_TO_MP4: dict[str, str] = {
     'RATE': 'rate',
     'SHOWMOVEMENT': 'shwm',
     'STOREDESCRIPTION': 'sdes',
-    'TITLE': '©trk',
+    'TITLE': '©nam',
     'TITLESORT': 'sonm',
     'TVEPISODE': 'tves',
     'TVEPISODEID': 'tven',
@@ -403,7 +439,21 @@ STANDARD_TO_MP4: dict[str, str] = {
     'TVSEASON': 'tvsn',
     'TVSHOW': 'tvsh',
     'TVSHOWSORT': 'sosn',
-    'WORK': '©wrk'
+    'WORK': '©wrk',
+    "MUSICBRAINZ_ALBUMARTISTID": "----:com.apple.iTunes:MusicBrainz Album Artist Id",
+    "MUSICBRAINZ_ALBUMID": "----:com.apple.iTunes:MusicBrainz Album Id",
+    "RELEASECOUNTRY": "----:com.apple.iTunes:MusicBrainz Album Release Country",
+    "RELEASESTATUS": "----:com.apple.iTunes:MusicBrainz Album Status",
+    "RELEASETYPE": "----:com.apple.iTunes:MusicBrainz Album Type",
+    "MUSICBRAINZ_ARTISTID": "----:com.apple.iTunes:MusicBrainz Artist Id",
+    "MUSICBRAINZ_DISCID": "----:com.apple.iTunes:MusicBrainz Disc Id",
+    "MUSICBRAINZ_ORIGINALALBUMID": "----:com.apple.iTunes:MusicBrainz Original Album Id",
+    "MUSICBRAINZ_ORIGINALARTISTID": "----:com.apple.iTunes:MusicBrainz Original Artist Id",
+    "MUSICBRAINZ_RELEASEGROUPID": "----:com.apple.iTunes:MusicBrainz Release Group Id",
+    "MUSICBRAINZ_RELEASETRACKID": "----:com.apple.iTunes:MusicBrainz Release Track Id",
+    "MUSICBRAINZ_TRACKID": "----:com.apple.iTunes:MusicBrainz Track Id",
+    "MUSICBRAINZ_TRMID": "----:com.apple.iTunes:MusicBrainz TRM Id",
+    "MUSICBRAINZ_WORKID": "----:com.apple.iTunes:MusicBrainz Work Id",
 }
 
 # tuple value 单独注册（tracknumber/totaldiscs 反查到原始 key）
@@ -414,16 +464,48 @@ MP4_TUPLE_REVERSE: dict[str, tuple[str, int]] = {
     'TRACKNUMBER': ('trkn', 0)
 }
 
-MP4_BOOL_FIELDS = {'cpil', 'pgap', 'hdvd', 'pcst', 'shwm'}
-MP4_INT_FIELDS = {
+MP4_BOOL_FIELDS = ['cpil', 'pgap', 'hdvd', 'pcst', 'shwm']
+MP4_INT_FIELDS = [
     'tmpo', 'rtng', 'plID', 'atID', 'cnID', 'cmID', 'sfID',
     'geID', 'stik', 'tves', 'tvsn', 'akID',
-}
+]
 
 
 # ============================================================================
 # ASF/WMA 相关映射
 # ============================================================================
+ASF_SKIP_TO_MAP = [
+    # 编码器信息
+    "WM/ToolName",
+    "WM/ToolVersion",
+    "WM/EncodedBy",
+    "WM/EncodingSettings",
+    "WM/EncodingTime",
+    "WM/ModifiedBy",
+    "ENCODERSETTINGS",
+
+    # 编解码器技术参数
+    "DeviceConformanceTemplate",
+    "IsVBR",
+    "WMFSDKVersion",
+    "WMFSDKNeeded",
+
+    # VBR/码率相关（编解码器自动写入）
+    "VBRPeak",
+    "VBRAverage",
+    "WM/WMADRCPeakReference",
+    "WM/WMADRCAverageReference",
+    "WM/WMADRCPeakTarget",
+    "WM/WMADRCAverageTarget",
+
+    # 文件技术属性（SDK自动生成）
+    "WM/UniqueFileIdentifier",
+    "WM/MediaClassPrimaryID",
+    "WM/MediaClassSecondaryID",
+
+    # 旧版的字段名，不保留直接删除
+    "WM/Track",
+]
 
 ASF_TO_STANDARD = {
     # Content Description Object 常见字段
@@ -435,18 +517,17 @@ ASF_TO_STANDARD = {
 
     # Extended Content Description / Metadata 常见音频字段
     "WM/AlbumTitle": "ALBUM",
+    "WM/ARTISTS": "ARTISTS",
     "WM/AlbumArtist": "ALBUMARTIST",
+    "WM/AlbumArtistSortOrder": "ALBUMARTISTSORT",
+    "WM/IsCompilation": "COMPILATION",
     "WM/Composer": "COMPOSER",
     "WM/Conductor": "CONDUCTOR",
-    "WM/Writer": "ENCODEDBY",
-    "WM/EncodedBy": "ENCODEDBY",
-    "WM/EncodingSettings": "ENCODERSETTINGS",
+    "WM/Writer": "LYRICIST",
     "WM/Genre": "GENRE",
-    "WM/GenreID": "GENRE",
-    "WM/Year": "DATE",
+    "WM/Year": "YEAR",
     "WM/TrackNumber": "TRACKNUMBER",
-    "WM/Track": "TRACKNUMBER",
-    "WM/PartOfSet": "DISCNUMBER",
+    "WM/PartOfSet": ("DISCNUMBER", "TOTALDISCS"),
     "WM/BeatsPerMinute": "BPM",
     "WM/InitialKey": "INITIALKEY",
     "WM/Language": "LANGUAGE",
@@ -454,6 +535,13 @@ ASF_TO_STANDARD = {
     "WM/Mood": "MOOD",
     "WM/Publisher": "PUBLISHER",
     "WM/ISRC": "ISRC",
+    "WM/Media": "Media",
+    "WM/ArtistSortOrder": "ARTISTSORT",
+    "WM/Barcode": "BARCODE",
+    "WM/Script": "SCRIPT",
+    "WM/CatalogNo": "CATALOGNUMBER",
+# TODO: 这个字段需要有额外处理，ID需要转换为对应的类
+#    "WM/GenreID": "GENRE",
 
     # 排序/扩展来源相关
     "WM/OriginalAlbumTitle": "ORIGINALALBUM",
@@ -461,7 +549,7 @@ ASF_TO_STANDARD = {
     "WM/OriginalFilename": "ORIGINALFILENAME",
     "WM/OriginalLyricist": "ORIGLYRICIST",
     "WM/OriginalReleaseTime": "ORIGINALDATE",
-    "WM/OriginalReleaseYear": "ORIGINALDATE",
+    "WM/OriginalReleaseYear": "ORIGINALYEAR",
 
     # 分组/说明类
     "WM/ContentGroupDescription": "CONTENTGROUP",
@@ -473,4 +561,21 @@ ASF_TO_STANDARD = {
     "WM/AudioSourceURL": "WWWAUDIOSOURCE",
     "CopyrightURL": "WWWCOPYRIGHT",
     "WM/PromotionURL": "WWWPUBLISHER",
+
+    # MusicBrainz 类
+    "MusicBrainz/Track Id": "MUSICBRAINZ_TRACKID",
+    "MusicBrainz/Album Id": "MUSICBRAINZ_ALBUMID",
+    "MusicBrainz/Album Release Country": "RELEASECOUNTRY",
+    "MusicBrainz/Release Track Id": "MUSICBRAINZ_RELEASETRACKID",
+    "MusicBrainz/Album Artist Id": "MUSICBRAINZ_ALBUMALISTARTISTID",
+    "MusicBrainz/Album Status": "RELEASESTATUS",
+    "MusicBrainz/Artist Id": "MUSICBRAINZ_ALBUMARTISTID",
+    "MusicBrainz/Release Group Id": "MUSICBRAINZ_RELEASEGROUPID",
+    "MusicBrainz/Album Type": "RELEASETYPE",
+    "MusicBrainz/Disc Id": "MUSICBRAINZ_DISCID",
+    "MusicBrainz/Original Album Id": "MUSICBRAINZ_ORIGINALALBUMID",
+    "MusicBrainz/Original Artist Id": "MUSICBRAINZ_ORIGINALARTISTID",
+    "MusicBrainz/TRM Id": "MUSICBRAINZ_TRMID",
+    "MusicBrainz/Work Id": "MUSICBRAINZ_WORKID",
+
 }

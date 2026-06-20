@@ -3,7 +3,7 @@ from mutagen.apev2 import APEv2
 from pathlib import Path
 
 from . import InternalImageTag, ImageType, MetaReader, MetaWriter, InternalTags
-from lib.tags.tag_mappings import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE
+from lib.tags.tag_mappings import APEV2_TO_STANDARD, STANDARD_TO_APEV2, IMAGE_TYPE_TO_APE, APEV2_TUPLE_REVERSE
 
 
 class APEv2Writer(MetaWriter):
@@ -16,13 +16,17 @@ class APEv2Writer(MetaWriter):
             audio.add_tags()
         self.audio = audio
         self.audio.tags.clear()
+        self.tuple_buf: dict[str, list] = {}
 
     def write(self, internal: InternalTags) -> None:
         for std_key, values in internal.items():
             if std_key == "PIC":
                 self._write_pic(values)
+            elif std_key in APEV2_TUPLE_REVERSE:
+                self._write_tuple(std_key, values)
             else:
                 self._write_text(std_key, values)
+        self._flush_tuples()  # 新增
         self.audio.save(self.output_path)
 
     def _write_pic(self, values: set) -> None:
@@ -30,10 +34,25 @@ class APEv2Writer(MetaWriter):
             if not isinstance(img, InternalImageTag):
                 continue
             img_type = img.type if isinstance(img.type, ImageType) else ImageType.Front
-            ape_field = IMAGE_TYPE_TO_APE.get(img_type, "Cover Art (Front)")
+            ape_key = IMAGE_TYPE_TO_APE.get(img_type, "Cover Art (Front)")
             suffix = (img.mime or "image/jpeg").split("/")[-1]
             filename = f"cover.{suffix}".encode("utf-8")
-            self.audio.tags[ape_field] = filename + b"\x00" + img.data
+            self.audio.tags[ape_key] = filename + b"\x00" + img.data
+
+    def _write_tuple(self, std_key: str, values: set) -> None:  # 新增
+        ape_key, idx = APEV2_TUPLE_REVERSE[std_key]
+        buf = self.tuple_buf.setdefault(ape_key, [0, 0])
+        try:
+            buf[idx] = int(next(iter(values), "0"))
+        except (ValueError, TypeError):
+            pass
+
+    def _flush_tuples(self) -> None:  # 新增
+        for ape_key, (num, total) in self.tuple_buf.items():
+            if total:
+                self.audio.tags[ape_key] = f"{num}/{total}"
+            else:
+                self.audio.tags[ape_key] = str(num)
 
     def _write_text(self, std_key: str, values: set) -> None:
         str_vals = [v for v in values if isinstance(v, str)]
@@ -85,5 +104,14 @@ class APEv2Reader(MetaReader):
     @staticmethod
     def _handle_text(field:str , tag) -> InternalTags:
         map_field = APEV2_TO_STANDARD.get(field.upper(), field)
-        values = set(tag.value.split(b"\x00")) if b"\x00" in tag else set(tag)
-        return {map_field: values}
+        if isinstance(map_field, tuple):
+            result = {}
+            map_field1, map_field2 = map_field
+            for val in tag:
+                val1, val2 = val.split('/')
+                result.setdefault(map_field1, set()).add(str(val1))
+                result.setdefault(map_field2, set()).add(str(val2))
+            return result
+        else:
+            values = set(tag.value.split(b"\x00")) if b"\x00" in tag else set(tag)
+            return {map_field: values}

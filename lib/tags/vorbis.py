@@ -21,7 +21,7 @@ class VorbisWriter(MetaWriter):
             if std_key == "PIC":
                 self._write_pic(values)
             else:
-                str_values = [v for v in values if isinstance(v, str)]
+                str_values = [str(v) for v in values]
                 if str_values:
                     self.audio[std_key.upper()] = str_values
         self.audio.save(self.output_path)

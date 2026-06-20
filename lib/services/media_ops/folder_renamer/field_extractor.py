@@ -103,6 +103,9 @@ class FieldExtractor:
         # 去掉末尾活动标记，例如 C70 / Comic
         s = re.sub(r"\s+[A-Za-z]+\d*$", "", s)
 
+        # 去掉末尾时间部分，例如 10:00:00 / 10:00
+        s = re.sub(r"\s+\d{1,2}:\d{2}(:\d{2})?$", "", s)
+
         # 1) 年份 yyyy
         m = re.fullmatch(r"(\d{4})", s)
         if m:

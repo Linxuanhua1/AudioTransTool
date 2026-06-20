@@ -20,8 +20,8 @@ class MP4Writer(MetaWriter):
             audio.add_tags()
         self.audio = audio
         self.tags: MP4Tags = audio.tags
-        self.tags.clear()
         self.tuple_buf: dict[str, list] = {}
+        self.tags.clear()
 
     def write(self, internal: InternalTags) -> None:
         for std_key, values in internal.items():
@@ -31,7 +31,7 @@ class MP4Writer(MetaWriter):
                 self._write_tuple(std_key, values)
             else:
                 mp4_key = STANDARD_TO_MP4.get(std_key)
-                if mp4_key is None:
+                if mp4_key is None or mp4_key.startswith("----:com.apple.iTunes:"):
                     self._write_freeform(std_key, values)
                 elif mp4_key in MP4_BOOL_FIELDS:
                     self._write_bool(mp4_key, values)
@@ -79,14 +79,14 @@ class MP4Writer(MetaWriter):
             self.tags[mp4_key] = int_vals
 
     def _write_freeform(self, std_key: str, values: set) -> None:
-        freeform_key = f"----:com.apple.iTunes:{std_key}"
+        freeform_key = f"----:com.apple.iTunes:{std_key}" if not std_key.startswith("----:com.apple.iTunes:") else std_key
         self.tags[freeform_key] = [
             MP4FreeForm(v.encode("utf-8") if isinstance(v, str) else v)
             for v in values
         ]
 
     def _write_str(self, mp4_key: str, values: set) -> None:
-        str_vals = [v for v in values if isinstance(v, str)]
+        str_vals = [str(v) for v in values]
         if str_vals:
             self.tags[mp4_key] = str_vals
 

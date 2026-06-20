@@ -1,7 +1,7 @@
 from pathlib import Path
 import struct
 
-from lib.tags.tag_mappings import ASF_TO_STANDARD
+from lib.tags.tag_mappings import ASF_TO_STANDARD, ASF_SKIP_TO_MAP
 from . import InternalImageTag, ImageType, MetaWriter, MetaReader, InternalTags
 
 
@@ -13,7 +13,6 @@ class AsfWriter(MetaWriter):
     def write(self, input_root: Path) -> None:
         pass
 
-# TODO: 可能会报错，没有支持所有字段
 class AsfReader(MetaReader):
     def read(self) -> InternalTags:
         tags = self.audio.tags
@@ -22,6 +21,9 @@ class AsfReader(MetaReader):
 
         std_tags: InternalTags = {}
         for field, tag in tags.items():
+            if field in ASF_SKIP_TO_MAP:
+                continue
+
             if field == "WM/Picture":
                 std_value = self._handle_asf_image(tag)
             else:
@@ -78,8 +80,20 @@ class AsfReader(MetaReader):
         raise ValueError("Invalid ASF picture block: unterminated UTF-16 string")
 
     @staticmethod
-    def _handle_text(field: str, tag: InternalTags) -> InternalTags:
-        map_field = ASF_TO_STANDARD.get(field, field)
-        values = set(i.value for i in tag)
-        return {map_field: values}
+    def _handle_text(field: str, tag) -> InternalTags:
+        if field not in ASF_TO_STANDARD:
+            raise ValueError(f"未知的 ASF 字段，缺少映射: {field!r}")
+        map_field = ASF_TO_STANDARD[field]
+        # 处理WM/PartOfSet
+        if isinstance(map_field, tuple):
+            result = {}
+            map_field1, map_field2 = map_field
+            for val in tag:
+                val1, val2 = val.value.split('/')
+                result.setdefault(map_field1, set()).add(str(val1))
+                result.setdefault(map_field2, set()).add(str(val2))
+            return result
+        else:
+            values = set(i.value for i in tag)
+            return {map_field: values}
 
