@@ -21,8 +21,8 @@ class MetaReader(ABC):
     def read(self) -> InternalTags:
         pass
 
-    @staticmethod
-    def copy_to(out_p: Path) -> None:
+    @abstractmethod
+    def copy_to(self, out_p: Path) -> None:
         pass
 
     @staticmethod

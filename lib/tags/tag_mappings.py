@@ -579,3 +579,71 @@ ASF_TO_STANDARD = {
     "MusicBrainz/Work Id": "MUSICBRAINZ_WORKID",
 
 }
+
+# ASF_TO_STANDARD 的反向映射（标准字段 -> ASF 字段）。
+# 由 ASF_TO_STANDARD 中所有“非元组”条目反转而来，标准值彼此唯一，无冲突。
+# 元组条目 WM/PartOfSet -> (DISCNUMBER, TOTALDISCS) 不在此处，单独由 ASF_TUPLE_REVERSE 处理。
+STANDARD_TO_ASF: dict[str, str] = {
+    'TITLE': 'Title',
+    'ARTIST': 'Author',
+    'COPYRIGHT': 'Copyright',
+    'COMMENT': 'Description',
+    'RATING': 'Rating',
+    'ALBUM': 'WM/AlbumTitle',
+    'ARTISTS': 'WM/ARTISTS',
+    'ALBUMARTIST': 'WM/AlbumArtist',
+    'ALBUMARTISTSORT': 'WM/AlbumArtistSortOrder',
+    'COMPILATION': 'WM/IsCompilation',
+    'COMPOSER': 'WM/Composer',
+    'CONDUCTOR': 'WM/Conductor',
+    'LYRICIST': 'WM/Writer',
+    'GENRE': 'WM/Genre',
+    'YEAR': 'WM/Year',
+    'TRACKNUMBER': 'WM/TrackNumber',
+    'BPM': 'WM/BeatsPerMinute',
+    'INITIALKEY': 'WM/InitialKey',
+    'LANGUAGE': 'WM/Language',
+    'LYRICS': 'WM/Lyrics',
+    'MOOD': 'WM/Mood',
+    'PUBLISHER': 'WM/Publisher',
+    'ISRC': 'WM/ISRC',
+    'Media': 'WM/Media',
+    'ARTISTSORT': 'WM/ArtistSortOrder',
+    'BARCODE': 'WM/Barcode',
+    'SCRIPT': 'WM/Script',
+    'CATALOGNUMBER': 'WM/CatalogNo',
+    'ORIGINALALBUM': 'WM/OriginalAlbumTitle',
+    'ORIGARTIST': 'WM/OriginalArtist',
+    'ORIGINALFILENAME': 'WM/OriginalFilename',
+    'ORIGLYRICIST': 'WM/OriginalLyricist',
+    'ORIGINALDATE': 'WM/OriginalReleaseTime',
+    'ORIGINALYEAR': 'WM/OriginalReleaseYear',
+    'CONTENTGROUP': 'WM/ContentGroupDescription',
+    'SUBTITLE': 'WM/SubTitle',
+    'WWWARTIST': 'WM/AuthorURL',
+    'WWWAUDIOFILE': 'WM/AudioFileURL',
+    'WWWAUDIOSOURCE': 'WM/AudioSourceURL',
+    'WWWCOPYRIGHT': 'CopyrightURL',
+    'WWWPUBLISHER': 'WM/PromotionURL',
+    'MUSICBRAINZ_TRACKID': 'MusicBrainz/Track Id',
+    'MUSICBRAINZ_ALBUMID': 'MusicBrainz/Album Id',
+    'RELEASECOUNTRY': 'MusicBrainz/Album Release Country',
+    'MUSICBRAINZ_RELEASETRACKID': 'MusicBrainz/Release Track Id',
+    'MUSICBRAINZ_ALBUMALISTARTISTID': 'MusicBrainz/Album Artist Id',
+    'RELEASESTATUS': 'MusicBrainz/Album Status',
+    'MUSICBRAINZ_ALBUMARTISTID': 'MusicBrainz/Artist Id',
+    'MUSICBRAINZ_RELEASEGROUPID': 'MusicBrainz/Release Group Id',
+    'RELEASETYPE': 'MusicBrainz/Album Type',
+    'MUSICBRAINZ_DISCID': 'MusicBrainz/Disc Id',
+    'MUSICBRAINZ_ORIGINALALBUMID': 'MusicBrainz/Original Album Id',
+    'MUSICBRAINZ_ORIGINALARTISTID': 'MusicBrainz/Original Artist Id',
+    'MUSICBRAINZ_TRMID': 'MusicBrainz/TRM Id',
+    'MUSICBRAINZ_WORKID': 'MusicBrainz/Work Id',
+}
+
+# 元组字段反查：标准字段 -> (ASF 字段, 在 "a/b" 中的下标)
+# 对应 ASF_TO_STANDARD 里的 "WM/PartOfSet": ("DISCNUMBER", "TOTALDISCS")
+ASF_TUPLE_REVERSE: dict[str, tuple[str, int]] = {
+    'DISCNUMBER': ('WM/PartOfSet', 0),
+    'TOTALDISCS': ('WM/PartOfSet', 1),
+}
