@@ -86,6 +86,12 @@ class ImageHandler(ABC):
             logger.debug(f"成功删除 {self.file_p}")
         logger.info(f"成功将{self.file_p}转换为jxl")
 
+    def _finalize_output_without_transfer_meta(self):
+        if self.is_del_src_img:
+            self.file_p.unlink(missing_ok=True)
+            logger.debug(f"成功删除 {self.file_p}")
+        logger.info(f"成功将{self.file_p}转换为jxl")
+
 
 class TiffHandler(ImageHandler):
     def compress_img(self):
@@ -112,7 +118,7 @@ class JpgHandler(ImageHandler):
     def compress_img(self):
         with self._processing_guard(self.out_p):
             self._reencode_file2jxl()
-            self._finalize_output()
+            self._finalize_output_without_transfer_meta()
 
 
 class PngHandler(ImageHandler):

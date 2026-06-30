@@ -122,7 +122,7 @@ class ImageExtractor:
                 vip_img = pyvips.Image.new_from_buffer(img.data, "")
                 vip_img.pngsave(str(out_path))
                 count += 1
-                logger.info(f"  保存：{out_path.name}", extra={"plain": True, "plain_to_file": True})
+                logger.info(f"  保存：{out_path.name}", extra={"plain": True})
             except Exception as e:
                 logger.error(f"  保存图片失败：{e}", extra={"plain": True, "plain_to_file": True})
 

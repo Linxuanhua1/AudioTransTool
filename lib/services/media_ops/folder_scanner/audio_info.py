@@ -111,15 +111,12 @@ class AudioQuality:
             ext = file_p.suffix.lower()
             found_formats.add(ext)
 
-            try:
-                info = metadata_map.get(file_p)
-                if info is None:
-                    continue
-                quality_str = AudioInfoParse.parse_probe(ext, info)
-                if quality_str != "N/A":
-                    qualities.add(AudioQuality(quality_str))
-            except Exception:
+            info = metadata_map.get(file_p)
+            if info is None:
                 continue
+            quality_str = AudioInfoParse.parse_probe(ext, info)
+            if quality_str != "N/A":
+                qualities.add(AudioQuality(quality_str))
 
         # 排序并用+连接
         sorted_qualities = sorted(qualities)
@@ -168,7 +165,7 @@ class AudioInfoParse:
                         stream["AudioBitsPerSample"],
                         stream["AudioSampleRate"],
                     )
-                return AudioInfoParse._fmt_bitrate_k(stream["BitsPerSample"])
+                return AudioInfoParse._fmt_bitrate_k(stream["AvgBitrate"])
 
             case ".wma":
                 return AudioInfoParse._fmt_bitrate_k(stream["MaxBitrate"])

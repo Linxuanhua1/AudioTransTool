@@ -65,10 +65,13 @@ class AsfWriter(MetaWriter):
         buf[idx] = str(next(iter(values), ""))
 
     def _flush_tuples(self) -> None:
-        # AsfReader 读取 WM/PartOfSet 时按 "a/b" 严格拆成两段，
-        # 所以这里始终写成 "num/total"（缺失的一段补 0），保证能被自身读回。
         for asf_key, (num, total) in self.tuple_buf.items():
-            self.tags[asf_key] = [f"{num or '0'}/{total or '0'}"]
+            if not num:
+                continue  # num 不存在，无论 total 是否存在都不写入
+            if total:
+                self.tags[asf_key] = [f"{num}/{total}"]
+            else:
+                self.tags[asf_key] = [num]
 
     def _write_text(self, std_key: str, values: set) -> None:
         asf_key = STANDARD_TO_ASF.get(std_key)
@@ -165,9 +168,13 @@ class AsfReader(MetaReader):
             result = {}
             map_field1, map_field2 = map_field
             for val in tag:
-                val1, val2 = val.value.split('/')
-                result.setdefault(map_field1, set()).add(str(val1))
-                result.setdefault(map_field2, set()).add(str(val2))
+                # discnumber字段可能不带/
+                if "/" in val.value:
+                    val1, val2 = val.value.split('/')
+                    result.setdefault(map_field1, set()).add(str(val1))
+                    result.setdefault(map_field2, set()).add(str(val2))
+                else:
+                    result.setdefault(map_field1, set()).add(str(val))
             return result
         else:
             values = set(i.value for i in tag)

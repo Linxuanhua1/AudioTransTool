@@ -54,6 +54,7 @@ class CatNoHelper:
         支持：
         1. ["ABCD-15599", "ABCD-15600", "ABCD-15601"] -> "ABCD-15599~01"
         2. ["FVCG-1339-2", "FVCG-1339-1"] -> "FVCG-1339"
+        3. ["SW-072EXCD", "SW-072EXDVD"] -> "SW-072EXCD+SW-072EXDVD"
         """
         if len(nums) == 1:
             return nums[0]
@@ -61,13 +62,20 @@ class CatNoHelper:
         def split_last_num(s: str):
             m = re.match(r"^(.*)-(\d+)$", s)
             if not m:
-                raise ValueError(f"编号格式不正确: {s}")
+                return None, None
             return m.group(1), int(m.group(2))
 
-        # 先按最后一段数字排序
-        nums = sorted(nums, key=lambda x: split_last_num(x)[1])
+        # 尝试按最后一段数字排序，失败则说明末段非纯数字
+        try:
+            nums_with_key = [(s, split_last_num(s)) for s in nums]
+            if any(k[1] is None for _, k in nums_with_key):
+                raise ValueError
+            nums = sorted(nums, key=lambda x: split_last_num(x)[1])
+        except ValueError:
+            # 末段非纯数字，无法按序号折叠，直接枚举拼接
+            return "+".join(sorted(nums))
 
-        # 只对 xxx-数字-数字 这种形式做“直接折叠成前半部分”
+        # 只对 xxx-数字-数字 这种形式做"直接折叠成前半部分"
         multi_prefixes = []
         all_multi_level = True
         for x in nums:
@@ -81,11 +89,14 @@ class CatNoHelper:
             return multi_prefixes[0]
 
         # 普通格式：ABCD-15599 -> ABCD-15599~01
-        m_start = re.match(r"^([A-Za-z]+)-(\d+)$", nums[0])
-        m_end = re.match(r"^([A-Za-z]+)-(\d+)$", nums[-1])
+        m_start = re.match(r"^(.+)-(\d+)$", nums[0])
+        m_end = re.match(r"^(.+)-(\d+)$", nums[-1])
 
         if not m_start or not m_end:
-            raise ValueError(f"无法按普通编号格式折叠: {nums}")
+            return "+".join(sorted(nums))
+
+        if m_start.group(1) != m_end.group(1):
+            return "+".join(sorted(nums))
 
         prefix = m_start.group(1)
         start_str = m_start.group(2)
