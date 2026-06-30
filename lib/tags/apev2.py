@@ -103,14 +103,18 @@ class APEv2Reader(MetaReader):
 
     @staticmethod
     def _handle_text(field:str , tag) -> InternalTags:
-        map_field = APEV2_TO_STANDARD.get(field.upper(), field)
+        map_field = APEV2_TO_STANDARD.get(field.upper(), field.upper())
         if isinstance(map_field, tuple):
             result = {}
             map_field1, map_field2 = map_field
             for val in tag:
-                val1, val2 = val.split('/')
-                result.setdefault(map_field1, set()).add(str(val1))
-                result.setdefault(map_field2, set()).add(str(val2))
+                # discnumber和track字段可能不带/
+                if "/" in val:
+                    val1, val2 = val.split('/')
+                    result.setdefault(map_field1, set()).add(str(val1))
+                    result.setdefault(map_field2, set()).add(str(val2))
+                else:
+                    result.setdefault(map_field1, set()).add(str(val))
             return result
         else:
             values = set(tag.value.split(b"\x00")) if b"\x00" in tag else set(tag)
