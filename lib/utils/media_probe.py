@@ -41,7 +41,7 @@ class MediaProbe:
     def _probe_wv(file_p: Path) -> dict | None:
         try:
             cmd = ["wvunpack", "-s", str(file_p)]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding="utf-8")
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding="utf-8", stdin=subprocess.DEVNULL)
             parsed = MediaProbe.parse_wvunpack_output(result.stdout)
             parsed['SourceFile'] = str(file_p)
             return parsed

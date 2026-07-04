@@ -173,6 +173,9 @@ class AudioInfoParse:
             case ".mp3":
                 return AudioInfoParse._fmt_bitrate_k(stream["AudioBitrate"])
 
+            case ".ogg":
+                return AudioInfoParse._fmt_bitrate_k(stream["NominalBitrate"])
+
             case _:
                 return "N/A"
 

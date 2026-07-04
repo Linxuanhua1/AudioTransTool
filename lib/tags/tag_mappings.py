@@ -502,6 +502,7 @@ ASF_SKIP_TO_MAP = [
     "WM/UniqueFileIdentifier",
     "WM/MediaClassPrimaryID",
     "WM/MediaClassSecondaryID",
+    "WM/MediaPrimaryClassID",
 
     # 旧版的字段名，不保留直接删除
     "WM/Track",
