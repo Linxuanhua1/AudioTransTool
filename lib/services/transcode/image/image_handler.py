@@ -125,4 +125,4 @@ class PngHandler(ImageHandler):
     def compress_img(self):
         with self._processing_guard(self.out_p):
             self._reencode_file2jxl()
-            self._finalize_output()
+            self._finalize_output_without_transfer_meta()
